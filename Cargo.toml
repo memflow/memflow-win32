@@ -20,7 +20,7 @@ codecov = { repository = "github", branch = "master", service = "github" }
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
-memflow = { version = "0.1", git = "https://github.com/memflow/memflow", branch = "next", default-features = false, features = ["plugins", "64_bit_mem"] }
+memflow = { version = "0.1", git = "https://github.com/memflow/memflow", branch = "next", default-features = false }
 log = { version = "0.4", default-features = false }
 pelite = { version = "0.9", default-features = false }
 goblin = { version = "0.4", default-features = false, features = ["pe32", "pe64"] }
@@ -52,7 +52,7 @@ serde = { version = "1.0", default-features = false, features = ["derive", "allo
 memflow = { version = "0.1", git = "https://github.com/memflow/memflow", branch = "next", default-features = false }
 
 [features]
-default = ["std", "serde_derive", "embed_offsets", "symstore", "download_progress", "regex"]
+default = ["std", "serde_derive", "embed_offsets", "symstore", "download_progress", "regex", "memflow/default"]
 std = ["no-std-compat/std", "memflow/std", "pelite/std", "goblin/std"]
 plugins = ["memflow/plugins", "simple_logger"]
 embed_offsets = ["serde", "memflow/serde_derive"]
