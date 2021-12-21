@@ -1,0 +1,11 @@
+/target
+**/*.rs.bk
+*.swp
+*.so
+*.dll
+*.dylib
+.vscode
+Cargo.lock
+*.so
+.vagrant
+TODO.md
