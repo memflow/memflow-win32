@@ -63,7 +63,9 @@ download_progress = ["pbr", "progress-streams"]
 [[example]]
 name = "dump_offsets"
 path = "examples/dump_offsets.rs"
+required-features = ["memflow/serde_derive"]
 
 [[example]]
 name = "generate_offsets"
 path = "examples/generate_offsets.rs"
+required-features = ["symstore"]
