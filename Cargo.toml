@@ -21,6 +21,7 @@ crate-type = ["lib", "cdylib"]
 
 [dependencies]
 memflow = { version = "0.1", git = "https://github.com/memflow/memflow", branch = "next", default-features = false }
+#memflow = { version = "0.1", path = "../memflow/memflow", default-features = false }
 log = { version = "0.4", default-features = false }
 pelite = { version = "0.9", default-features = false }
 goblin = { version = "0.4", default-features = false, features = ["pe32", "pe64"] }
@@ -50,6 +51,7 @@ toml = "0.5"
 toml = "0.5"
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 memflow = { version = "0.1", git = "https://github.com/memflow/memflow", branch = "next", default-features = false }
+#memflow = { version = "0.1", path = "../memflow/memflow", default-features = false }
 
 [features]
 default = ["std", "serde_derive", "embed_offsets", "symstore", "download_progress", "regex", "memflow/default"]
