@@ -2,7 +2,7 @@ use crate::offsets::SymbolStore;
 use crate::win32::{Win32Kernel, Win32KernelBuilder};
 
 use memflow::cglue;
-use memflow::plugins::args;
+use memflow::plugins::{args, OsArgs};
 use memflow::prelude::v1::*;
 use memflow::types::cache::TimedCacheValidator;
 
@@ -11,7 +11,7 @@ use std::time::Duration;
 
 #[os_layer_bare(name = "win32")]
 pub fn build_kernel(
-    args: &Args,
+    args: &OsArgs,
     mem: Option<ConnectorInstanceArcBox<'static>>,
     lib: CArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
@@ -20,7 +20,7 @@ pub fn build_kernel(
     })?;
 
     let builder = Win32Kernel::builder(mem);
-    build_dtb(builder, args, lib)
+    build_dtb(builder, &args.extra_args, lib)
 }
 
 fn build_final<
@@ -100,42 +100,6 @@ fn build_kernel_hint<
     }
 }
 
-fn build_page_cache<
-    A: 'static + PhysicalMemory + Clone,
-    B: 'static + PhysicalMemory + Clone,
-    C: 'static + VirtualTranslate2 + Clone,
->(
-    builder: Win32KernelBuilder<A, B, C>,
-    args: &Args,
-    lib: CArc<c_void>,
-) -> Result<OsInstanceArcBox<'static>> {
-    match args::parse_vatcache(args)? {
-        Some((0, _)) => build_kernel_hint(
-            builder
-                .build_page_cache(|v, a| CachedPhysicalMemory::builder(v).arch(a).build().unwrap()),
-            args,
-            lib,
-        ),
-        Some((size, time)) => build_kernel_hint(
-            builder.build_page_cache(move |v, a| {
-                let builder = CachedPhysicalMemory::builder(v).arch(a).cache_size(size);
-
-                if time > 0 {
-                    builder
-                        .validator(TimedCacheValidator::new(Duration::from_millis(time).into()))
-                        .build()
-                        .unwrap()
-                } else {
-                    builder.build().unwrap()
-                }
-            }),
-            args,
-            lib,
-        ),
-        None => build_kernel_hint(builder, args, lib),
-    }
-}
-
 fn build_vat<
     A: 'static + PhysicalMemory + Clone,
     B: 'static + PhysicalMemory + Clone,
@@ -146,14 +110,14 @@ fn build_vat<
     lib: CArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args::parse_vatcache(args)? {
-        Some((0, _)) => build_page_cache(
+        Some((0, _)) => build_kernel_hint(
             builder.build_vat_cache(|v, a| {
                 CachedVirtualTranslate::builder(v).arch(a).build().unwrap()
             }),
             args,
             lib,
         ),
-        Some((size, time)) => build_page_cache(
+        Some((size, time)) => build_kernel_hint(
             builder.build_vat_cache(move |v, a| {
                 let builder = CachedVirtualTranslate::builder(v).arch(a).entries(size);
 
@@ -169,7 +133,7 @@ fn build_vat<
             args,
             lib,
         ),
-        None => build_page_cache(builder, args, lib),
+        None => build_kernel_hint(builder, args, lib),
     }
 }
 
