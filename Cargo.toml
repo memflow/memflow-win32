@@ -20,7 +20,7 @@ codecov = { repository = "github", branch = "master", service = "github" }
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
-memflow = { version = "0.1", git = "https://github.com/memflow/memflow", branch = "next", default-features = false }
+memflow = { version = "0.1", git = "https://github.com/memflow/memflow", branch = "next", default-features = false, features = ["goblin"] }
 #memflow = { version = "0.1", path = "../memflow/memflow", default-features = false }
 log = { version = "0.4", default-features = false }
 pelite = { version = "0.9", default-features = false }

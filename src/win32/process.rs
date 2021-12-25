@@ -1,4 +1,3 @@
-use std::convert::TryInto;
 use std::prelude::v1::*;
 
 use super::{Win32Kernel, Win32ModuleListInfo};
@@ -11,8 +10,6 @@ use memflow::prelude::v1::{Result, *};
 // those only required when compiling cglue code
 #[cfg(feature = "plugins")]
 use memflow::cglue;
-
-use goblin::pe::{options::ParseOptions, PE};
 
 use super::Win32VirtualTranslate;
 
@@ -278,98 +275,25 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> Process
     fn module_import_list_callback(
         &mut self,
         info: &ModuleInfo,
-        mut callback: ImportCallback,
+        callback: ImportCallback,
     ) -> Result<()> {
-        let mut module_image = vec![
-            0u8;
-            info.size.try_into().map_err(|_| Error(
-                ErrorOrigin::OsLayer,
-                ErrorKind::OutOfBounds
-            ))?
-        ];
-        self.virt_mem
-            .read_raw_into(info.base, &mut module_image)
-            .data_part()?;
-
-        let pe = PE::parse_with_opts(&module_image, &ParseOptions { resolve_rva: false })
-            .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))?;
-
-        pe.imports
-            .iter()
-            .take_while(|i| {
-                callback.call(ImportInfo {
-                    name: ReprCString::from(i.name.to_string()),
-                    offset: i.offset as umem,
-                })
-            })
-            .for_each(|_| ());
-
-        Ok(())
+        memflow::os::util::module_import_list_callback(&mut self.virt_mem, info, callback)
     }
 
     fn module_export_list_callback(
         &mut self,
         info: &ModuleInfo,
-        mut callback: ExportCallback,
+        callback: ExportCallback,
     ) -> Result<()> {
-        let mut module_image = vec![
-            0u8;
-            info.size.try_into().map_err(|_| Error(
-                ErrorOrigin::OsLayer,
-                ErrorKind::OutOfBounds
-            ))?
-        ];
-        self.virt_mem
-            .read_raw_into(info.base, &mut module_image)
-            .data_part()?;
-
-        let pe = PE::parse_with_opts(&module_image, &ParseOptions { resolve_rva: false })
-            .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))?;
-
-        pe.exports
-            .iter()
-            .take_while(|e| {
-                callback.call(ExportInfo {
-                    name: ReprCString::from(e.name.map(|n| n.to_string()).unwrap_or_default()),
-                    offset: e.offset as umem,
-                })
-            })
-            .for_each(|_| ());
-
-        Ok(())
+        memflow::os::util::module_export_list_callback(&mut self.virt_mem, info, callback)
     }
 
     fn module_section_list_callback(
         &mut self,
         info: &ModuleInfo,
-        mut callback: SectionCallback,
+        callback: SectionCallback,
     ) -> Result<()> {
-        let mut module_image = vec![
-            0u8;
-            info.size.try_into().map_err(|_| Error(
-                ErrorOrigin::OsLayer,
-                ErrorKind::OutOfBounds
-            ))?
-        ];
-        self.virt_mem
-            .read_raw_into(info.base, &mut module_image)
-            .data_part()?;
-
-        let pe = PE::parse_with_opts(&module_image, &ParseOptions { resolve_rva: false })
-            .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))?;
-
-        pe.sections
-            .iter()
-            .take_while(|s| {
-                callback.call(SectionInfo {
-                    name: ReprCString::from(&s.name[..]),
-                    base: info.base + s.virtual_address as umem,
-                    size: s.virtual_size as umem,
-                })
-            })
-            .for_each(|_| ());
-
-        Ok(())
+        memflow::os::util::module_section_list_callback(&mut self.virt_mem, info, callback)
     }
 
     /// Retrieves the process info
