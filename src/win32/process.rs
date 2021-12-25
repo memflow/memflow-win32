@@ -158,7 +158,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> VirtualTranslate
     }
 }
 
-impl<T: MemoryView> Process for Win32Process<T> {
+// TODO: implement VAD and rollback to the old bound!
+//impl<T: MemoryView> Process for Win32Process<T> {
+
+impl<T: PhysicalMemory, V: VirtualTranslate2> Process
+    for Win32Process<VirtualDma<T, V, Win32VirtualTranslate>>
+{
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
@@ -370,6 +375,16 @@ impl<T: MemoryView> Process for Win32Process<T> {
     /// Retrieves the process info
     fn info(&self) -> &ProcessInfo {
         &self.proc_info.base_info
+    }
+
+    fn mapped_mem_range(
+        &mut self,
+        gap_size: imem,
+        start: Address,
+        end: Address,
+        out: MemoryRangeCallback,
+    ) {
+        self.virt_mem.virt_page_map_range(gap_size, start, end, out)
     }
 }
 
