@@ -6,14 +6,13 @@ use memflow::plugins::{args, OsArgs};
 use memflow::prelude::v1::*;
 use memflow::types::cache::TimedCacheValidator;
 
-use std::ffi::c_void;
 use std::time::Duration;
 
 #[os_layer_bare(name = "win32")]
 pub fn build_kernel(
     args: &OsArgs,
     mem: Option<ConnectorInstanceArcBox<'static>>,
-    lib: CArc<c_void>,
+    lib: LibArc,
 ) -> Result<OsInstanceArcBox<'static>> {
     let mem = mem.ok_or_else(|| {
         Error(ErrorOrigin::OsLayer, ErrorKind::Configuration).log_error("Must provide memory!")
@@ -30,7 +29,7 @@ fn build_final<
 >(
     kernel_builder: Win32KernelBuilder<A, B, C>,
     _: &Args,
-    lib: CArc<c_void>,
+    lib: LibArc,
 ) -> Result<OsInstanceArcBox<'static>> {
     log::info!(
         "Building kernel of type {}",
@@ -47,7 +46,7 @@ fn build_arch<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: CArc<c_void>,
+    lib: LibArc,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args.get("arch").map(|a| a.to_lowercase()).as_deref() {
         Some("x64") => build_final(builder.arch(ArchitectureIdent::X86(64, false)), args, lib),
@@ -69,7 +68,7 @@ fn build_symstore<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: CArc<c_void>,
+    lib: LibArc,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args.get("symstore") {
         Some("uncached") => build_arch(
@@ -89,7 +88,7 @@ fn build_kernel_hint<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: CArc<c_void>,
+    lib: LibArc,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args
         .get("kernel_hint")
@@ -107,7 +106,7 @@ fn build_vat<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: CArc<c_void>,
+    lib: LibArc,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args::parse_vatcache(args)? {
         Some((0, _)) => build_kernel_hint(
@@ -144,7 +143,7 @@ fn build_dtb<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: CArc<c_void>,
+    lib: LibArc,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args
         .get("dtb")
