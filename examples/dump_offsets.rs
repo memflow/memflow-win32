@@ -4,7 +4,7 @@ use std::io::Write;
 use clap::*;
 use log::{error, Level};
 
-use memflow::prelude::v1::{ErrorKind, Result, *};
+use memflow::prelude::v1::{Result, *};
 use memflow_win32::prelude::v1::*;
 
 pub fn main() -> Result<()> {
