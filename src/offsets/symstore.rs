@@ -6,7 +6,7 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-use dirs::home_dir;
+use dirs::cache_dir;
 use log::info;
 
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
@@ -55,7 +55,9 @@ fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
 #[cfg(not(feature = "download_progress"))]
 fn read_to_end<T: Read>(reader: &mut T, _len: usize) -> Result<Vec<u8>> {
     let mut buffer = vec![];
-    reader.read_to_end(&mut buffer)?;
+    reader.read_to_end(&mut buffer).map_err(|_| {
+        Error(ErrorOrigin::OsLayer, ErrorKind::Http).log_error("unable to read from http request")
+    })?;
     Ok(buffer)
 }
 
@@ -67,10 +69,10 @@ pub struct SymbolStore {
 
 impl Default for SymbolStore {
     fn default() -> Self {
-        let home_dir = home_dir().expect("unable to get home directory");
+        let cache_dir = cache_dir().expect("unable to get cache directory");
         Self {
             base_url: "https://msdl.microsoft.com/download/symbols".to_string(),
-            cache_path: Some(home_dir.join(".memflow").join("cache")),
+            cache_path: Some(cache_dir.join("memflow")),
         }
     }
 }
