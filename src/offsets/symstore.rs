@@ -13,7 +13,7 @@ use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 #[cfg(feature = "download_progress")]
 use {
-    pbr::ProgressBar,
+    indicatif::{ProgressBar, ProgressStyle},
     progress_streams::ProgressReader,
     std::sync::atomic::{AtomicBool, AtomicUsize, Ordering},
     std::sync::Arc,
@@ -27,7 +27,10 @@ fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
     let mut reader = ProgressReader::new(reader, |progress: usize| {
         total.fetch_add(progress, Ordering::SeqCst);
     });
-    let mut pb = ProgressBar::new(len as u64);
+    let pb = ProgressBar::new(len as u64);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+        .progress_chars("#>-"));
 
     let finished = Arc::new(AtomicBool::new(false));
     let thread = {
@@ -36,10 +39,10 @@ fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
 
         std::thread::spawn(move || {
             while !finished_thread.load(Ordering::Relaxed) {
-                pb.set(total_thread.load(Ordering::SeqCst) as u64);
+                pb.set_position(total_thread.load(Ordering::SeqCst) as u64);
                 std::thread::sleep(std::time::Duration::from_millis(10));
             }
-            pb.finish();
+            pb.finish_with_message("downloaded");
         })
     };
 
