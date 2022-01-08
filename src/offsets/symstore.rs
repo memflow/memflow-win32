@@ -6,14 +6,14 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-use dirs::home_dir;
+use dirs::cache_dir;
 use log::info;
 
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 #[cfg(feature = "download_progress")]
 use {
-    pbr::ProgressBar,
+    indicatif::{ProgressBar, ProgressStyle},
     progress_streams::ProgressReader,
     std::sync::atomic::{AtomicBool, AtomicUsize, Ordering},
     std::sync::Arc,
@@ -27,7 +27,10 @@ fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
     let mut reader = ProgressReader::new(reader, |progress: usize| {
         total.fetch_add(progress, Ordering::SeqCst);
     });
-    let mut pb = ProgressBar::new(len as u64);
+    let pb = ProgressBar::new(len as u64);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+        .progress_chars("#>-"));
 
     let finished = Arc::new(AtomicBool::new(false));
     let thread = {
@@ -36,10 +39,10 @@ fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
 
         std::thread::spawn(move || {
             while !finished_thread.load(Ordering::Relaxed) {
-                pb.set(total_thread.load(Ordering::SeqCst) as u64);
+                pb.set_position(total_thread.load(Ordering::SeqCst) as u64);
                 std::thread::sleep(std::time::Duration::from_millis(10));
             }
-            pb.finish();
+            pb.finish_with_message("downloaded");
         })
     };
 
@@ -55,7 +58,9 @@ fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
 #[cfg(not(feature = "download_progress"))]
 fn read_to_end<T: Read>(reader: &mut T, _len: usize) -> Result<Vec<u8>> {
     let mut buffer = vec![];
-    reader.read_to_end(&mut buffer)?;
+    reader.read_to_end(&mut buffer).map_err(|_| {
+        Error(ErrorOrigin::OsLayer, ErrorKind::Http).log_error("unable to read from http request")
+    })?;
     Ok(buffer)
 }
 
@@ -67,10 +72,10 @@ pub struct SymbolStore {
 
 impl Default for SymbolStore {
     fn default() -> Self {
-        let home_dir = home_dir().expect("unable to get home directory");
+        let cache_dir = cache_dir().expect("unable to get cache directory");
         Self {
             base_url: "https://msdl.microsoft.com/download/symbols".to_string(),
-            cache_path: Some(home_dir.join(".memflow").join("cache")),
+            cache_path: Some(cache_dir.join("memflow")),
         }
     }
 }
