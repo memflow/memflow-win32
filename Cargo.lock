@@ -597,7 +597,7 @@ dependencies = [
  "memmap",
  "no-std-compat",
  "once_cell",
- "pelite 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pelite",
  "rangemap",
  "serde",
  "smallvec",
@@ -630,7 +630,7 @@ dependencies = [
  "memflow",
  "no-std-compat",
  "pdb",
- "pelite 0.9.0",
+ "pelite",
  "progress-streams",
  "rand",
  "rand_xorshift",
@@ -753,27 +753,14 @@ dependencies = [
 [[package]]
 name = "pelite"
 version = "0.9.0"
-dependencies = [
- "dataview",
- "no-std-compat",
- "pelite-macros 0.1.1",
- "serde",
-]
-
-[[package]]
-name = "pelite"
-version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c270b1a0c279bbcb4cff3d2294121731c48ee68f0435d26cf71018a853cb890"
 dependencies = [
  "dataview",
  "no-std-compat",
- "pelite-macros 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pelite-macros",
+ "serde",
 ]
-
-[[package]]
-name = "pelite-macros"
-version = "0.1.1"
 
 [[package]]
 name = "pelite-macros"
