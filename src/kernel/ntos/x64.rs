@@ -6,10 +6,11 @@ use crate::kernel::StartBlock;
 use log::{debug, trace};
 
 use memflow::architecture::{x86::x64, ArchitectureObj};
+use memflow::cglue::tuple::*;
 use memflow::dataview::Pod;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::iter::PageChunks;
-use memflow::mem::{MemData, MemoryView, VirtualTranslate};
+use memflow::mem::{MemoryView, VirtualTranslate};
 use memflow::types::{mem, size, smem, umem, Address};
 
 use pelite::image::IMAGE_DOS_HEADER;
@@ -91,7 +92,7 @@ pub fn find<T: MemoryView + VirtualTranslate>(
 
     match page_map
         .into_iter()
-        .flat_map(|MemData(address, size)| size.page_chunks(address, size::mb(2)))
+        .flat_map(|CTup3(address, size, _)| size.page_chunks(address, size::mb(2)))
         .filter(|(_, size)| *size > mem::kb(256))
         .filter_map(|(va, _)| find_with_va(virt_mem, va.to_umem()).ok())
         .next()

@@ -1,8 +1,9 @@
 use memflow::{
     architecture::{arm, x86, ArchitectureIdent, ArchitectureObj},
+    cglue::tuple::*,
     iter::SplitAtIndex,
     mem::{
-        MemData, MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2, VirtualTranslate3,
+        MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2, VirtualTranslate3,
         VtopFailureCallback, VtopOutputCallback,
     },
     types::{umem, Address},
@@ -36,7 +37,7 @@ impl VirtualTranslate3 for Win32VirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        VI: Iterator<Item = MemData<Address, B>>,
+        VI: Iterator<Item = CTup3<Address, Address, B>>,
     >(
         &self,
         mem: &mut T,

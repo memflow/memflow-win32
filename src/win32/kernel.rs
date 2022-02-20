@@ -464,20 +464,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> AsMut<VirtualDma<T, V, Win32Virtua
 }
 
 impl<T: PhysicalMemory, V: VirtualTranslate2> PhysicalMemory for Win32Kernel<T, V> {
-    fn phys_read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<PhysicalReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        self.virt_mem.phys_mem().phys_read_raw_iter(data, out_fail)
+    fn phys_read_raw_iter(&mut self, data: PhysicalReadMemOps) -> Result<()> {
+        self.virt_mem.phys_mem().phys_read_raw_iter(data)
     }
 
-    fn phys_write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<PhysicalWriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        self.virt_mem.phys_mem().phys_write_raw_iter(data, out_fail)
+    fn phys_write_raw_iter(&mut self, data: PhysicalWriteMemOps) -> Result<()> {
+        self.virt_mem.phys_mem().phys_write_raw_iter(data)
     }
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
@@ -490,20 +482,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> PhysicalMemory for Win32Kernel<T, 
 }
 
 impl<T: PhysicalMemory, V: VirtualTranslate2> MemoryView for Win32Kernel<T, V> {
-    fn read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<ReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        self.virt_mem.read_raw_iter(data, out_fail)
+    fn read_raw_iter(&mut self, data: ReadRawMemOps) -> Result<()> {
+        self.virt_mem.read_raw_iter(data)
     }
 
-    fn write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<WriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        self.virt_mem.write_raw_iter(data, out_fail)
+    fn write_raw_iter(&mut self, data: WriteRawMemOps) -> Result<()> {
+        self.virt_mem.write_raw_iter(data)
     }
 
     fn metadata(&self) -> MemoryViewMetadata {

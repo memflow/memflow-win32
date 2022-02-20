@@ -121,20 +121,12 @@ impl<V: MemoryView> AsMut<V> for Win32Process<V> {
 }
 
 impl<T: MemoryView> MemoryView for Win32Process<T> {
-    fn read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<ReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        self.virt_mem.read_raw_iter(data, out_fail)
+    fn read_raw_iter(&mut self, data: ReadRawMemOps) -> Result<()> {
+        self.virt_mem.read_raw_iter(data)
     }
 
-    fn write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<WriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        self.virt_mem.write_raw_iter(data, out_fail)
+    fn write_raw_iter(&mut self, data: WriteRawMemOps) -> Result<()> {
+        self.virt_mem.write_raw_iter(data)
     }
 
     fn metadata(&self) -> MemoryViewMetadata {
@@ -147,7 +139,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> VirtualTranslate
 {
     fn virt_to_phys_list(
         &mut self,
-        addrs: &[MemoryRange],
+        addrs: &[VtopRange],
         out: VirtualTranslationCallback,
         out_fail: VirtualTranslationFailCallback,
     ) {
