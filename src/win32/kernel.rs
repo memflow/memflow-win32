@@ -617,6 +617,47 @@ impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + C
             .map_err(From::from)
     }
 
+    /// Retrieves address of the primary module structure of the process
+    ///
+    /// This will generally be for the initial executable that was run
+    fn primary_module_address(&mut self) -> Result<Address> {
+        Ok(self.kernel_info.os_info.base)
+    }
+
+    /// Retrieves information for the primary module of the process
+    ///
+    /// This will generally be the initial executable that was run
+    fn primary_module(&mut self) -> Result<ModuleInfo> {
+        self.module_by_name("ntoskrnl.exe")
+    }
+
+    /// Retrieves a list of all imports of a given module
+    fn module_import_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: ImportCallback,
+    ) -> Result<()> {
+        memflow::os::util::module_import_list_callback(&mut self.virt_mem, info, callback)
+    }
+
+    /// Retrieves a list of all exports of a given module
+    fn module_export_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: ExportCallback,
+    ) -> Result<()> {
+        memflow::os::util::module_export_list_callback(&mut self.virt_mem, info, callback)
+    }
+
+    /// Retrieves a list of all sections of a given module
+    fn module_section_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: SectionCallback,
+    ) -> Result<()> {
+        memflow::os::util::module_section_list_callback(&mut self.virt_mem, info, callback)
+    }
+
     /// Retrieves the kernel info
     fn info(&self) -> &OsInfo {
         &self.kernel_info.os_info
