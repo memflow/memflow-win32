@@ -621,7 +621,7 @@ impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + C
     ///
     /// This will generally be for the initial executable that was run
     fn primary_module_address(&mut self) -> Result<Address> {
-        Ok(self.kernel_info.os_info.base)
+        Ok(self.module_by_name("ntoskrnl.exe")?.address)
     }
 
     /// Retrieves information for the primary module of the process
