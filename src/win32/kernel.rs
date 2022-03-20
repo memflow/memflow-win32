@@ -10,6 +10,7 @@ use super::{
     Win32ModuleListInfo, Win32Process, Win32ProcessInfo, Win32VirtualTranslate,
 };
 
+use memflow::mem::virt_translate::*;
 use memflow::prelude::v1::{Result, *};
 
 #[cfg(feature = "plugins")]
@@ -29,7 +30,7 @@ use pelite::{self, pe64::exports::Export, PeView};
 const MAX_ITER_COUNT: usize = 65536;
 
 #[cfg(feature = "plugins")]
-cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { PhysicalMemory, MemoryView, OsKeyboardInner<'a> });
+cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { PhysicalMemory, MemoryView, VirtualTranslate, OsKeyboardInner<'a> });
 
 #[derive(Clone)]
 pub struct Win32Kernel<T, V> {
@@ -492,6 +493,17 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> MemoryView for Win32Kernel<T, V> {
 
     fn metadata(&self) -> MemoryViewMetadata {
         self.virt_mem.metadata()
+    }
+}
+
+impl<T: PhysicalMemory, V: VirtualTranslate2> VirtualTranslate for Win32Kernel<T, V> {
+    fn virt_to_phys_list(
+        &mut self,
+        addrs: &[VtopRange],
+        out: VirtualTranslationCallback,
+        out_fail: VirtualTranslationFailCallback,
+    ) {
+        self.virt_mem.virt_to_phys_list(addrs, out, out_fail)
     }
 }
 
