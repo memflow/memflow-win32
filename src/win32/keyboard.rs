@@ -34,7 +34,7 @@ use memflow::error::PartialResultExt;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2};
 use memflow::os::keyboard::*;
-use memflow::prelude::OsInner;
+use memflow::prelude::{ExportInfo, ModuleInfo, OsInner};
 use memflow::types::{umem, Address};
 
 #[cfg(feature = "plugins")]
@@ -42,8 +42,6 @@ use memflow::cglue;
 
 use log::debug;
 use std::convert::TryInto;
-
-use pelite::{self, pe64::exports::Export, PeView};
 
 #[cfg(feature = "plugins")]
 cglue_impl_group!(Win32Keyboard<T>, IntoKeyboard);
@@ -130,18 +128,9 @@ impl<T> Win32Keyboard<T> {
         let mut user_process = kernel.process_by_info(user_process_info)?;
         debug!("found user proxy process: {:?}", user_process);
 
-        // read with user_process dtb
-        let module_buf = user_process
-            .read_raw(
-                win32kbase_module_info.base,
-                win32kbase_module_info.size.try_into().unwrap(),
-            )
-            .data_part()?;
-        debug!("fetched {:x} bytes from win32kbase.sys", module_buf.len());
-
         // TODO: lazy
-        let export_addr =
-            Self::find_gaf_pe(&module_buf).or_else(|_| Self::find_gaf_sig(&module_buf))?;
+        let export_addr = Self::find_gaf_pe(&mut user_process.virt_mem, &win32kbase_module_info)
+            .or_else(|_| Self::find_gaf_sig(&mut user_process.virt_mem, &win32kbase_module_info))?;
 
         Ok((
             user_process_info_win32,
@@ -149,35 +138,50 @@ impl<T> Win32Keyboard<T> {
         ))
     }
 
-    fn find_gaf_pe(module_buf: &[u8]) -> Result<umem> {
-        let pe = PeView::from_bytes(module_buf)
-            .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err))?;
-
-        // TODO: always use sigscan as fallback
-        match pe.get_export_by_name("gafAsyncKeyState").map_err(|err| {
+    fn find_gaf_pe(
+        virt_mem: &mut impl MemoryView,
+        win32kbase_module_info: &ModuleInfo,
+    ) -> Result<umem> {
+        let mut offset = None;
+        let callback = &mut |export: ExportInfo| {
+            if export.name.as_ref() == "gafAsyncKeyState" {
+                offset = Some(export.offset);
+                false
+            } else {
+                true
+            }
+        };
+        memflow::os::util::module_export_list_callback(
+            virt_mem,
+            win32kbase_module_info,
+            callback.into(),
+        )?;
+        offset.ok_or_else(|| {
             Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                 .log_info("unable to find gafAsyncKeyState")
-                .log_info(err)
-        })? {
-            Export::Symbol(s) => {
-                debug!("gafAsyncKeyState export found at: {:x}", *s);
-                Ok(*s as umem)
-            }
-            Export::Forward(_) => Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
-                .log_info("export gafAsyncKeyState found but it is forwarded")),
-        }
+        })
     }
 
     // TODO: replace with a custom signature scanning crate
     #[cfg(feature = "regex")]
-    fn find_gaf_sig(module_buf: &[u8]) -> Result<umem> {
+    fn find_gaf_sig(
+        virt_mem: &mut impl MemoryView,
+        win32kbase_module_info: &ModuleInfo,
+    ) -> Result<umem> {
         use ::regex::bytes::*;
+
+        let module_buf = virt_mem
+            .read_raw(
+                win32kbase_module_info.base,
+                win32kbase_module_info.size.try_into().unwrap(),
+            )
+            .data_part()?;
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
         let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
                     .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info("malformed gafAsyncKeyState signature"))?;
         let buf_offs = re
-            .find(module_buf)
+            .find(module_buf.as_slice())
             .ok_or_else(|| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
                     .log_info("unable to find gafAsyncKeyState signature")
