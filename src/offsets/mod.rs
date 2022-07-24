@@ -103,7 +103,7 @@ pub struct Win32Offsets(pub Win32OffsetTable);
 
 impl From<Win32OffsetTable> for Win32Offsets {
     fn from(other: Win32OffsetTable) -> Self {
-        Self { 0: other }
+        Self(other)
     }
 }
 
@@ -320,40 +320,38 @@ impl Win32Offsets {
             .unwrap_or(0) as _;
         let mm_vad_u = mm_vad.find_field("u").map(|f| f.offset).unwrap_or(0) as _;
 
-        Ok(Self {
-            0: Win32OffsetTable {
-                list_blink,
-                eproc_link,
+        Ok(Self(Win32OffsetTable {
+            list_blink,
+            eproc_link,
 
-                phys_mem_block,
+            phys_mem_block,
 
-                kproc_dtb,
+            kproc_dtb,
 
-                eproc_pid,
-                eproc_name,
-                eproc_peb,
-                eproc_section_base,
-                eproc_exit_status,
-                eproc_thread_list,
-                eproc_wow64,
-                eproc_vad_root,
+            eproc_pid,
+            eproc_name,
+            eproc_peb,
+            eproc_section_base,
+            eproc_exit_status,
+            eproc_thread_list,
+            eproc_wow64,
+            eproc_vad_root,
 
-                kthread_teb,
-                ethread_list_entry,
-                teb_peb,
-                teb_peb_x86,
+            kthread_teb,
+            ethread_list_entry,
+            teb_peb,
+            teb_peb_x86,
 
-                balanced_node_left,
-                balanced_node_right,
+            balanced_node_left,
+            balanced_node_right,
 
-                mm_vad_vad_node,
-                mm_vad_starting_vpn,
-                mm_vad_ending_vpn,
-                mm_vad_starting_vpn_high,
-                mm_vad_ending_vpn_high,
-                mm_vad_u,
-            },
-        })
+            mm_vad_vad_node,
+            mm_vad_starting_vpn,
+            mm_vad_ending_vpn,
+            mm_vad_starting_vpn_high,
+            mm_vad_ending_vpn_high,
+            mm_vad_u,
+        }))
     }
 
     /// _LIST_ENTRY::Blink offset

@@ -306,7 +306,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> Process
 
 // TODO: replace the following impls with a dedicated builder
 // TODO: add non cloneable thing
-impl<'a, T: PhysicalMemory, V: VirtualTranslate2>
+impl<T: PhysicalMemory, V: VirtualTranslate2>
     Win32Process<VirtualDma<T, V, Win32VirtualTranslate>>
 {
     pub fn with_kernel(kernel: Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {

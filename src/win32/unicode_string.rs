@@ -14,7 +14,7 @@ pub trait VirtualReadUnicodeString {
 }
 
 // TODO: split up cpu and proc arch in read_helper.rs
-impl<'a, T: MemoryView> VirtualReadUnicodeString for T {
+impl<T: MemoryView> VirtualReadUnicodeString for T {
     fn read_unicode_string(&mut self, proc_arch: ArchitectureObj, addr: Address) -> Result<String> {
         /*
         typedef struct _windows_unicode_string32 {

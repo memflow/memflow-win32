@@ -77,7 +77,7 @@ impl<'a, const N: usize> From<&'a [u8]> for BinaryString<N> {
 
         arr[..other.len()].copy_from_slice(other);
 
-        Self { 0: arr }
+        Self(arr)
     }
 }
 
@@ -97,7 +97,7 @@ impl<'a, const N: usize> From<&'a str> for BinaryString<N> {
 
         arr[..other.len()].copy_from_slice(other.as_bytes());
 
-        Self { 0: arr }
+        Self(arr)
     }
 }
 
@@ -153,7 +153,7 @@ impl<'de, const N: usize> ::serde::de::Deserialize<'de> for BinaryString<N> {
 
         // use our visitor to deserialize an `ActualValue`
         let inner: [u8; N] = deserializer.deserialize_any(BinaryStringVisitor)?;
-        Ok(Self { 0: inner })
+        Ok(Self(inner))
     }
 }
 

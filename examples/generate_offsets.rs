@@ -114,7 +114,7 @@ pub fn main() {
                 win_id.0.major_version(),
                 win_id.0.minor_version(),
                 win_id.0.build_number(),
-                win_id.1.to_string(),
+                win_id.1,
                 win_id.2.guid,
             );
 

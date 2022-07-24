@@ -53,7 +53,7 @@ pub struct Win32Keyboard<T> {
     key_state_addr: Address,
 }
 
-impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone>
+impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone>
     Win32Keyboard<VirtualDma<T, V, Win32VirtualTranslate>>
 {
     pub fn with_kernel(mut kernel: Win32Kernel<T, V>) -> Result<Self> {
@@ -198,7 +198,10 @@ impl<T> Win32Keyboard<T> {
     }
 
     #[cfg(not(feature = "regex"))]
-    fn find_gaf_sig(_module_buf: &[u8]) -> Result<umem> {
+    fn find_gaf_sig(
+        virt_mem: &mut impl MemoryView,
+        win32kbase_module_info: &ModuleInfo,
+    ) -> Result<umem> {
         Err(
             Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
                 .log_error("signature scanning requires std"),

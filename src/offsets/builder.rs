@@ -85,9 +85,7 @@ impl Win32OffsetBuilder {
                     <&str>::try_from(&offset.pdb_guid),
                 ) {
                     if target_guid.file_name == file && target_guid.guid == guid {
-                        return Ok(Win32Offsets {
-                            0: offset.offsets.clone(),
-                        });
+                        return Ok(Win32Offsets(offset.offsets.clone()));
                     }
                 }
             }
@@ -106,9 +104,7 @@ impl Win32OffsetBuilder {
                     && arch == offset.arch
                 {
                     prev_build_number = offset.nt_build_number;
-                    closest_match = Some(Win32Offsets {
-                        0: offset.offsets.clone(),
-                    });
+                    closest_match = Some(Win32Offsets(offset.offsets.clone()));
                 }
             }
 
