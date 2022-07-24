@@ -8,8 +8,8 @@ use memflow::types::cache::TimedCacheValidator;
 
 use std::time::Duration;
 
-#[os_layer_bare(name = "win32")]
-pub fn build_kernel(
+#[os(name = "win32", accept_input = true, return_wrapped = true)]
+pub fn create_os(
     args: &OsArgs,
     mem: Option<ConnectorInstanceArcBox<'static>>,
     lib: LibArc,
