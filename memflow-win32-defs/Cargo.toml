@@ -32,4 +32,4 @@ download_progress = ["indicatif", "progress-streams"]
 [[example]]
 name = "generate_offsets"
 path = "examples/generate_offsets.rs"
-required-features = ["symstore"]
+required-features = ["symstore", "serde"]
