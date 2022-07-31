@@ -585,8 +585,7 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 [[package]]
 name = "memflow"
 version = "0.2.0-beta7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2e55eeeec513cd77a4410920f40458a8e08fc5715a313041c0b22455144b9cb"
+source = "git+https://github.com/memflow/memflow?branch=main#9f712ae417c750fab356a2badf4c6dca06f445e2"
 dependencies = [
  "abi_stable",
  "bitflags",
@@ -616,8 +615,7 @@ dependencies = [
 [[package]]
 name = "memflow-derive"
 version = "0.2.0-beta3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee50e66f855a8a9c93b7c107fab899b25952ba8c7f0e97602a662a99c84fbef7"
+source = "git+https://github.com/memflow/memflow?branch=main#9f712ae417c750fab356a2badf4c6dca06f445e2"
 dependencies = [
  "darling",
  "proc-macro-crate",
@@ -631,22 +629,33 @@ name = "memflow-win32"
 version = "0.2.0-beta7"
 dependencies = [
  "clap",
- "dirs",
- "indicatif",
  "log",
  "memflow",
+ "memflow-win32-defs",
  "no-std-compat",
- "pdb",
  "pelite",
- "progress-streams",
  "rand",
  "rand_xorshift",
  "regex",
  "serde",
  "simplelog",
  "toml",
- "ureq",
  "widestring",
+]
+
+[[package]]
+name = "memflow-win32-defs"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "indicatif",
+ "log",
+ "memflow",
+ "no-std-compat",
+ "pdb",
+ "progress-streams",
+ "serde",
+ "ureq",
 ]
 
 [[package]]

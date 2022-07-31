@@ -1,0 +1,25 @@
+[package]
+name = "memflow-win32-defs"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+memflow = { version = "^0.2.0-beta7", default-features = false }
+log = { version = "^0.4.14", default-features = false }
+no-std-compat = { version = "^0.4.1", features = ["alloc"] }
+serde = { version = "^1.0.133", default-features = false, optional = true, features = ["derive"] }
+
+# symbolstore
+dirs = { version = "^4.0.0", optional = true }
+ureq = { version = "^2.4.0", optional = true }
+pdb = { version = "^0.7.0", optional = true }
+indicatif = { version = "^0.16.2", optional = true }
+progress-streams = { version = "^1.1.0", optional = true }
+
+[features]
+default = ["symstore", "download_progress"]
+std = ["no-std-compat/std"]
+symstore = ["dirs", "ureq", "pdb", "std"]
+download_progress = ["indicatif", "progress-streams"]
