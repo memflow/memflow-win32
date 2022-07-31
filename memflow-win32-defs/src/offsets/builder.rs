@@ -154,8 +154,8 @@ impl<'a> Win32OffsetBuilder<'a> {
         self
     }
 
-    pub fn guid(mut self, guid: Option<Win32Guid>) -> Self {
-        self.guid = guid;
+    pub fn guid(mut self, guid: Win32Guid) -> Self {
+        self.guid = Some(guid);
         self
     }
 

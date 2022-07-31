@@ -647,6 +647,7 @@ dependencies = [
 name = "memflow-win32-defs"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "dirs",
  "indicatif",
  "log",
@@ -655,6 +656,8 @@ dependencies = [
  "pdb",
  "progress-streams",
  "serde",
+ "simplelog",
+ "toml",
  "ureq",
 ]
 

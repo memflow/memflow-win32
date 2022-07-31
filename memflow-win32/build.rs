@@ -116,7 +116,7 @@ fn embed_offsets() -> Result<(), Box<dyn Error>> {
                         .map(|f| {
                             Win32Offsets::builder()
                                 .symbol_store(SymbolStore::new())
-                                .guid(Some(Win32Guid::new(f, guid)))
+                                .guid(Win32Guid::new(f, guid))
                                 .build()
                                 .map(|v| (v.0, f))
                         })

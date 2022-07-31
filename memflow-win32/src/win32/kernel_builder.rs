@@ -85,13 +85,18 @@ use memflow::types::{Address, DefaultCacheValidator};
 /// Manual initialization of the above examples would look like the following:
 /// ```
 /// use memflow::prelude::v1::*;
-/// use memflow_win32::prelude::{Win32KernelInfo, Win32Offsets, Win32Kernel};
+/// use memflow_win32::prelude::{
+///     Win32KernelInfo,
+///     Win32Offsets,
+///     Win32Kernel,
+///     offset_builder_with_kernel_info
+/// };
 ///
 /// fn test<T: 'static + PhysicalMemory + Clone>(mut connector: T) {
 ///     // Use the ntoskrnl scanner to find the relevant KernelInfo (start_block, arch, dtb, ntoskrnl, etc)
 ///     let kernel_info = Win32KernelInfo::scanner(connector.forward_mut()).scan().unwrap();
 ///     // Download the corresponding pdb from the default symbol store
-///     let offsets = offset_builder_with_kernel_info(&kernel_info)Win32Offsets::builder().build().unwrap();
+///     let offsets = offset_builder_with_kernel_info(&kernel_info).build().unwrap();
 ///
 ///     // Create a struct for doing virtual to physical memory translations
 ///     let vat = DirectTranslate::new();

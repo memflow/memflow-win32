@@ -352,7 +352,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> Process
                 // RXW (maybe)
                 println!("FL {fl:b} | {}", offsets.protection_bit);
 
-                let r = fl & (0b1 << offsets.protection_bit);
+                let _r = fl & (0b1 << offsets.protection_bit);
 
                 let fl = fl >> offsets.protection_bit;
 

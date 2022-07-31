@@ -35,8 +35,8 @@ impl Win32KernelInfo {
         &self,
         mut offsets: Win32OffsetBuilder<'a>,
     ) -> Win32OffsetBuilder<'a> {
-        if offsets.get_guid().is_none() {
-            offsets = offsets.guid(self.kernel_guid.clone());
+        if offsets.get_guid().is_none() && self.kernel_guid.is_some() {
+            offsets = offsets.guid(self.kernel_guid.clone().unwrap());
         }
 
         if offsets.get_winver().is_none() {

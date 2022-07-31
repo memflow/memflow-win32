@@ -9,7 +9,8 @@ pub mod symstore;
 pub mod offset_table;
 #[doc(hidden)]
 pub use offset_table::{
-    MmVadOffsetTable, Win32OffsetFile, Win32OffsetTable, Win32OffsetsArchitecture,
+    MmVadOffsetTable, Win32OffsetFile, Win32OffsetHeader, Win32OffsetTable,
+    Win32OffsetsArchitecture,
 };
 
 #[cfg(feature = "symstore")]

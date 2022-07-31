@@ -48,8 +48,8 @@ memflow-win32-defs = { version = "0.1", path = "../memflow-win32-defs", features
 default = ["std", "serde_derive", "embed_offsets", "symstore", "download_progress", "regex", "memflow/default"]
 std = ["no-std-compat/std", "memflow/std", "pelite/std"]
 plugins = ["memflow/plugins"]
-embed_offsets = ["serde", "memflow/serde_derive"]
-serde_derive = ["serde", "memflow/serde_derive", "pelite/std", "pelite/serde"]
+embed_offsets = ["serde", "memflow/serde_derive", "memflow-win32-defs/serde"]
+serde_derive = ["serde", "memflow/serde_derive", "pelite/std", "pelite/serde", "memflow-win32-defs/serde"]
 symstore = ["memflow-win32-defs/symstore"]
 download_progress = ["memflow-win32-defs/download_progress"]
 
@@ -57,8 +57,3 @@ download_progress = ["memflow-win32-defs/download_progress"]
 name = "dump_offsets"
 path = "examples/dump_offsets.rs"
 required-features = ["memflow/serde_derive"]
-
-[[example]]
-name = "generate_offsets"
-path = "examples/generate_offsets.rs"
-required-features = ["symstore"]

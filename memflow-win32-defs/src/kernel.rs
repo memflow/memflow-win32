@@ -1,7 +1,7 @@
 use std::cmp::{Ord, Ordering, PartialEq};
 use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32Guid {
     pub file_name: String,

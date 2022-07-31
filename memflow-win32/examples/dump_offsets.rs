@@ -23,7 +23,7 @@ pub fn main() -> Result<()> {
     let winver = os.kernel_info.kernel_winver;
 
     if winver != (0, 0).into() {
-        let guid = os.kernel_info.kernel_guid.as_ref().unwrap_or_default();
+        let guid = os.kernel_info.kernel_guid.unwrap_or_default();
         let offsets = Win32OffsetFile {
             header: Win32OffsetHeader {
                 pdb_file_name: guid.file_name.as_str().into(),

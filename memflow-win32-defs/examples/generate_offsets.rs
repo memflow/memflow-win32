@@ -4,7 +4,7 @@ use std::fs::{create_dir_all, File};
 use std::io::Write;
 use std::path::PathBuf;
 
-use memflow_win32::prelude::v1::*;
+use memflow_win32_defs::{kernel::*, offsets::*};
 
 pub fn main() {
     let matches = App::new("generate offsets example")
@@ -95,14 +95,16 @@ pub fn main() {
             .build()
         {
             let offset_file = Win32OffsetFile {
-                pdb_file_name: win_id.2.file_name.as_str().into(),
-                pdb_guid: win_id.2.guid.as_str().into(),
+                header: Win32OffsetHeader {
+                    pdb_file_name: win_id.2.file_name.as_str().into(),
+                    pdb_guid: win_id.2.guid.as_str().into(),
 
-                nt_major_version: win_id.0.major_version(),
-                nt_minor_version: win_id.0.minor_version(),
-                nt_build_number: win_id.0.build_number(),
+                    nt_major_version: win_id.0.major_version(),
+                    nt_minor_version: win_id.0.minor_version(),
+                    nt_build_number: win_id.0.build_number(),
 
-                arch: win_id.1,
+                    arch: win_id.1,
+                },
 
                 offsets: offsets.0,
             };
