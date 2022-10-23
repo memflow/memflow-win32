@@ -34,7 +34,7 @@ use memflow::error::PartialResultExt;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2};
 use memflow::os::keyboard::*;
-use memflow::prelude::{ExportInfo, ModuleInfo, OsInner};
+use memflow::prelude::{ExportInfo, ModuleInfo, OsInner, Pid, Process};
 use memflow::types::{umem, Address};
 
 #[cfg(feature = "plugins")]
@@ -119,18 +119,51 @@ impl<T> Win32Keyboard<T> {
         let win32kbase_module_info = kernel.module_by_name("win32kbase.sys")?;
         debug!("found win32kbase.sys: {:?}", win32kbase_module_info);
 
-        let user_process_info = kernel
-            .process_info_by_name("winlogon.exe")
-            .or_else(|_| kernel.process_info_by_name("wininit.exe"))
-            .or_else(|_| kernel.process_info_by_name("explorer.exe"))?;
+        let procs = kernel.process_info_list()?;
+
+        let gaf = procs
+            .iter()
+            .filter(|p| {
+                p.name.as_ref() == "winlogon.exe"
+                    || p.name.as_ref() == "explorer.exe"
+                    || p.name.as_ref() == "taskhostw.exe"
+                    || p.name.as_ref() == "smartscreen.exe"
+                    || p.name.as_ref() == "dwm.exe"
+            })
+            .find_map(|p| Self::find_in_user_process(kernel, &win32kbase_module_info, p.pid).ok())
+            .ok_or_else(|| {
+                Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
+                    .log_info("unable to find any proxy process that contains gafAsyncKeyState")
+            })?;
+
+        Ok((gaf.0, gaf.1))
+    }
+
+    fn find_in_user_process<
+        P: 'static + PhysicalMemory + Clone,
+        V: 'static + VirtualTranslate2 + Clone,
+    >(
+        kernel: &mut Win32Kernel<P, V>,
+        win32kbase_module_info: &ModuleInfo,
+        pid: Pid,
+    ) -> Result<(Win32ProcessInfo, Address)> {
+        let user_process_info = kernel.process_info_by_pid(pid)?;
         let user_process_info_win32 =
             kernel.process_info_from_base_info(user_process_info.clone())?;
         let mut user_process = kernel.process_by_info(user_process_info)?;
-        debug!("found user proxy process: {:?}", user_process);
+        debug!(
+            "trying to find gaf signature in user proxy process `{}`",
+            user_process.info().name.as_ref()
+        );
 
         // TODO: lazy
         let export_addr = Self::find_gaf_pe(&mut user_process.virt_mem, &win32kbase_module_info)
             .or_else(|_| Self::find_gaf_sig(&mut user_process.virt_mem, &win32kbase_module_info))?;
+        debug!(
+            "found gaf signature in user proxy process `{}` at {:x}",
+            user_process.info().name.as_ref(),
+            export_addr
+        );
 
         Ok((
             user_process_info_win32,
