@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use memflow::dataview::Pod;
+use memflow::dataview::PodMethods;
 use std::convert::TryInto;
 
 #[cfg(feature = "embed_offsets")]

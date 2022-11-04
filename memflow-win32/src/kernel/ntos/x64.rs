@@ -7,13 +7,13 @@ use log::{debug, trace};
 
 use memflow::architecture::{x86::x64, ArchitectureObj};
 use memflow::cglue::tuple::*;
-use memflow::dataview::Pod;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::iter::PageChunks;
 use memflow::mem::{MemoryView, VirtualTranslate};
 use memflow::types::{mem, size, smem, umem, Address};
 
 use pelite::image::IMAGE_DOS_HEADER;
+use pelite::Pod;
 
 pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
     virt_mem: &mut T,

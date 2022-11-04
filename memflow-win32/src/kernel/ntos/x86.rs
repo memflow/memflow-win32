@@ -3,7 +3,6 @@ use std::prelude::v1::*;
 use super::pehelper;
 use crate::kernel::StartBlock;
 
-use memflow::dataview::Pod;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::MemoryView;
 use memflow::types::{size, umem, Address};
@@ -11,6 +10,7 @@ use memflow::types::{size, umem, Address};
 use log::{debug, info};
 
 use pelite::image::IMAGE_DOS_HEADER;
+use pelite::Pod;
 
 const SIZE_256MB: usize = size::mb(256);
 const SIZE_8MB: usize = size::mb(8);
