@@ -30,6 +30,7 @@ fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
     let pb = ProgressBar::new(len as u64);
     pb.set_style(ProgressStyle::default_bar()
         .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+        .unwrap()
         .progress_chars("#>-"));
 
     let finished = Arc::new(AtomicBool::new(false));

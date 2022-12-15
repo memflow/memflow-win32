@@ -3,6 +3,7 @@ use std::prelude::v1::*;
 use super::pehelper;
 use crate::kernel::StartBlock;
 
+use memflow::dataview::PodMethods;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::MemoryView;
 use memflow::types::{size, umem, Address};
@@ -10,7 +11,6 @@ use memflow::types::{size, umem, Address};
 use log::{debug, info};
 
 use pelite::image::IMAGE_DOS_HEADER;
-use pelite::Pod;
 
 const SIZE_256MB: usize = size::mb(256);
 const SIZE_8MB: usize = size::mb(8);
@@ -30,7 +30,7 @@ pub fn find<T: MemoryView>(virt_mem: &mut T, _start_block: &StartBlock) -> Resul
 
         for addr in (0..SIZE_8MB).step_by(SIZE_4KB) {
             // TODO: potential endian mismatch in pod
-            let view = Pod::as_data_view(&buf[addr..]);
+            let view = PodMethods::as_data_view(&buf[addr..]);
 
             // check for dos header signature (MZ) // TODO: create global
             if view.read::<IMAGE_DOS_HEADER>(0).e_magic != 0x5a4d {

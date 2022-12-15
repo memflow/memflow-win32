@@ -30,7 +30,7 @@ use pelite::{self, pe64::exports::Export, PeView};
 const MAX_ITER_COUNT: usize = 65536;
 
 #[cfg(feature = "plugins")]
-cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { PhysicalMemory, MemoryView, VirtualTranslate, OsKeyboardInner<'a> });
+cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { PhysicalMemory, MemoryView, VirtualTranslate, OsKeyboard });
 
 #[derive(Clone)]
 pub struct Win32Kernel<T, V> {
@@ -521,10 +521,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> VirtualTranslate for Win32Kernel<T
     }
 }
 
-impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone> OsInner<'a>
+impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone> Os
     for Win32Kernel<T, V>
 {
-    type ProcessType = Win32Process<Fwd<&'a mut T>, Fwd<&'a mut V>, Win32VirtualTranslate>;
+    type ProcessType<'a> = Win32Process<Fwd<&'a mut T>, Fwd<&'a mut V>, Win32VirtualTranslate>;
     type IntoProcessType = Win32Process<T, V, Win32VirtualTranslate>;
 
     /// Walks a process list and calls a callback for each process structure address
@@ -587,9 +587,9 @@ impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + C
     ///
     /// It will share the underlying memory resources
     fn process_by_info(
-        &'a mut self,
+        &mut self,
         info: ProcessInfo,
-    ) -> memflow::error::Result<Self::ProcessType> {
+    ) -> memflow::error::Result<Self::ProcessType<'_>> {
         let proc_info = self.process_info_from_base_info(info)?;
         Ok(Win32Process::with_kernel_ref(self, proc_info))
     }
@@ -689,14 +689,14 @@ impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + C
     }
 }
 
-impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone>
-    OsKeyboardInner<'a> for Win32Kernel<T, V>
+impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone> OsKeyboard
+    for Win32Kernel<T, V>
 {
-    type KeyboardType =
+    type KeyboardType<'a> =
         Win32Keyboard<VirtualDma<Fwd<&'a mut T>, Fwd<&'a mut V>, Win32VirtualTranslate>>;
     type IntoKeyboardType = Win32Keyboard<VirtualDma<T, V, Win32VirtualTranslate>>;
 
-    fn keyboard(&'a mut self) -> memflow::error::Result<Self::KeyboardType> {
+    fn keyboard(&mut self) -> memflow::error::Result<Self::KeyboardType<'_>> {
         Win32Keyboard::with_kernel_ref(self)
     }
 

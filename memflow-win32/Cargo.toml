@@ -2,7 +2,8 @@
 name = "memflow-win32"
 version = "0.2.0-beta9"
 authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.65"
 description = "win32 integration of the memflow physical memory introspection framework"
 documentation = "https://docs.rs/memflow-win32"
 readme = "../README.md"
@@ -22,8 +23,8 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 memflow = { version = "0.2.0-beta9", default-features = false }
 log = { version = "^0.4.14", default-features = false }
-pelite = { version = "^0.9.0", default-features = false }
-widestring = { version = "^0.5.1", default-features = false, features = ["alloc"] }
+pelite = { version = "^0.10.0", default-features = false }
+widestring = { version = "^1.0.2", default-features = false, features = ["alloc"] }
 no-std-compat = { version = "^0.4.1", features = ["alloc"] }
 serde = { version = "^1.0.133", default-features = false, optional = true, features = ["derive"] }
 memflow-win32-defs = { version = "0.2.0-beta9", path = "../memflow-win32-defs", default-features = false }
@@ -32,10 +33,10 @@ memflow-win32-defs = { version = "0.2.0-beta9", path = "../memflow-win32-defs", 
 regex = { version = "^1.5.0", optional = true }
 
 [dev_dependencies]
-simplelog = "^0.11.1"
+simplelog = "^0.12.0"
 rand = "^0.8.4"
 rand_xorshift = "^0.3.0"
-clap = { version = "^3.0.5", features = ["cargo"] }
+clap = { version = "^4.0.26", features = ["cargo"] }
 toml = "^0.5.8"
 
 [build_dependencies]

@@ -250,7 +250,7 @@ pub struct BaseClass {
 pub struct Field<'p> {
     pub type_name: String,
     pub name: pdb::RawString<'p>,
-    pub offset: u16,
+    pub offset: u64,
     pub bit_offset: u8,
 }
 

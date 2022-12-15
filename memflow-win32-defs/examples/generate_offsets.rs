@@ -7,20 +7,19 @@ use std::path::PathBuf;
 use memflow_win32_defs::{kernel::*, offsets::*};
 
 pub fn main() {
-    let matches = App::new("generate offsets example")
+    let matches = Command::new("generate offsets example")
         .version(crate_version!())
         .author(crate_authors!())
-        .arg(Arg::new("verbose").short('v').multiple_occurrences(true))
+        .arg(Arg::new("verbose").short('v').action(ArgAction::Count))
         .arg(
             Arg::new("output")
-                .long("output")
                 .short('o')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .required(true),
         )
         .get_matches();
 
-    let log_level = match matches.occurrences_of("verbose") {
+    let log_level = match matches.get_count("verbose") {
         0 => Level::Error,
         1 => Level::Warn,
         2 => Level::Info,
@@ -85,7 +84,7 @@ pub fn main() {
         ),
     ];
 
-    let out_dir = matches.value_of("output").unwrap();
+    let out_dir = matches.get_one::<String>("output").unwrap();
     create_dir_all(out_dir).unwrap();
 
     for win_id in win_ids.into_iter() {

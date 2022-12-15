@@ -195,7 +195,7 @@ where
 
     #[cfg(feature = "symstore")]
     fn build_offsets(&self, kernel_info: &Win32KernelInfo) -> Result<Win32Offsets> {
-        let mut builder = offset_builder_with_kernel_info(&kernel_info);
+        let mut builder = offset_builder_with_kernel_info(kernel_info);
         if let Some(store) = &self.symbol_store {
             builder = builder.symbol_store(store.clone());
         } else {

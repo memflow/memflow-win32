@@ -123,7 +123,7 @@ impl Win32ModuleListInfo {
 
         // If size here is messed up, try to parse it from the module pe file
         if size < 0x1000 {
-            if let Ok(new_size) = crate::kernel::ntos::pehelper::try_get_pe_size(mem, base.into()) {
+            if let Ok(new_size) = crate::kernel::ntos::pehelper::try_get_pe_size(mem, base) {
                 size = new_size;
                 trace!("pe size={:x}", size);
             }

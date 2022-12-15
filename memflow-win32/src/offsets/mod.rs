@@ -26,7 +26,7 @@ pub fn offset_builder<'a>() -> Win32OffsetBuilder<'a> {
                 WIN32_OFFSETS.0.len() / std::mem::size_of::<Win32OffsetFile>(),
             )
         };
-        builder.offset_list(&offsets)
+        builder.offset_list(offsets)
     }
     #[cfg(not(feature = "embed_offsets"))]
     builder

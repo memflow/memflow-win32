@@ -34,7 +34,7 @@ use memflow::error::PartialResultExt;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2};
 use memflow::os::keyboard::*;
-use memflow::prelude::{ExportInfo, ModuleInfo, OsInner, Pid, Process};
+use memflow::prelude::{ExportInfo, ModuleInfo, Os, Pid, Process};
 use memflow::types::{umem, Address};
 
 #[cfg(feature = "plugins")]
@@ -157,8 +157,8 @@ impl<T> Win32Keyboard<T> {
         );
 
         // TODO: lazy
-        let export_addr = Self::find_gaf_pe(&mut user_process.virt_mem, &win32kbase_module_info)
-            .or_else(|_| Self::find_gaf_sig(&mut user_process.virt_mem, &win32kbase_module_info))?;
+        let export_addr = Self::find_gaf_pe(&mut user_process.virt_mem, win32kbase_module_info)
+            .or_else(|_| Self::find_gaf_sig(&mut user_process.virt_mem, win32kbase_module_info))?;
         debug!(
             "found gaf signature in user proxy process `{}` at {:x}",
             user_process.info().name.as_ref(),

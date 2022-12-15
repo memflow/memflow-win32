@@ -7,13 +7,13 @@ use log::{debug, trace};
 
 use memflow::architecture::{x86::x64, ArchitectureObj};
 use memflow::cglue::tuple::*;
+use memflow::dataview::PodMethods;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::iter::PageChunks;
 use memflow::mem::{MemoryView, VirtualTranslate};
 use memflow::types::{mem, size, smem, umem, Address};
 
 use pelite::image::IMAGE_DOS_HEADER;
-use pelite::Pod;
 
 pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
     virt_mem: &mut T,
@@ -54,8 +54,8 @@ fn find_with_va<T: MemoryView + VirtualTranslate>(virt_mem: &mut T, va_base: ume
     buf.chunks_exact(x64::ARCH.page_size())
         .enumerate()
         .map(|(i, c)| {
-            let view = Pod::as_data_view(c);
-            (i, c, view.copy::<IMAGE_DOS_HEADER>(0)) // TODO: potential endian mismatch
+            let view = PodMethods::as_data_view(c);
+            (i, c, view.read::<IMAGE_DOS_HEADER>(0)) // TODO: potential endian mismatch
         })
         .filter(|(_, _, p)| p.e_magic == 0x5a4d) // MZ
         .filter(|(_, _, p)| p.e_lfanew <= 0x800)

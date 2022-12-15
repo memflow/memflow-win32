@@ -62,10 +62,10 @@ impl<'a> Win32OffsetBuilder<'a> {
     }
 
     fn build_with_offset_list(&self) -> Result<Win32Offsets> {
-        let offsets = self.offset_list.ok_or(
+        let offsets = self.offset_list.ok_or_else(|| {
             Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                .log_error("no offset list supplied"),
-        )?;
+                .log_error("no offset list supplied")
+        })?;
 
         // Try matching exact guid
         if let Some(target_guid) = &self.guid {
@@ -75,7 +75,7 @@ impl<'a> Win32OffsetBuilder<'a> {
                     <&str>::try_from(&offset.header.pdb_guid),
                 ) {
                     if target_guid.file_name == file && target_guid.guid == guid {
-                        return Ok(Win32Offsets(offset.offsets.clone()));
+                        return Ok(Win32Offsets(offset.offsets));
                     }
                 }
             }
@@ -94,7 +94,7 @@ impl<'a> Win32OffsetBuilder<'a> {
                     && arch == offset.header.arch
                 {
                     prev_build_number = offset.header.nt_build_number;
-                    closest_match = Some(Win32Offsets(offset.offsets.clone()));
+                    closest_match = Some(Win32Offsets(offset.offsets));
                 }
             }
 

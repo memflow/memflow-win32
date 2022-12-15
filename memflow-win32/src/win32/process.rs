@@ -449,7 +449,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate2>
     /// When u need a cloneable Process u have to use the `::with_kernel` function
     /// which will move the kernel object.
     pub fn with_kernel_ref(kernel: &'a mut Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
-        let sysproc_dtb = kernel.virt_mem.translator().clone();
+        let sysproc_dtb = *kernel.virt_mem.translator();
 
         let (phys_mem, vat) = kernel.virt_mem.mem_vat_pair();
         let virt_mem = VirtualDma::with_vat(
