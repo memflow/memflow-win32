@@ -73,6 +73,11 @@ pub fn main() {
             Win32Guid::new("ntkrnlmp.pdb", "9C00B19DBDE003DBFE4AB4216993C8431"),
         ),
         (
+            Win32Version::new(10, 0, 19045),
+            Win32OffsetsArchitecture::X64,
+            Win32Guid::new("ntkrnlmp.pdb", "5F0CF5D532F385333A9B4ABA25CA65961")
+        ),
+        (
             Win32Version::new(10, 0, 19041),
             Win32OffsetsArchitecture::X86,
             Win32Guid::new("ntkrpamp.pdb", "1B1D6AA205E1C87DC63A314ACAA50B491"),
