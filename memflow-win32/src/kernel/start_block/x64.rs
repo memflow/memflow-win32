@@ -34,6 +34,7 @@ pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
 
 fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
     // TODO: global define / config setting
+    #[allow(clippy::unnecessary_cast)]
     let max_mem = mem::gb(512) as u64;
 
     let pte = u64::from_le_bytes(mem[0..8].try_into().unwrap());
@@ -44,6 +45,7 @@ fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
 
     // Second half must have a self ref entry
     // This is usually enough to filter wrong data out
+    #[allow(clippy::unnecessary_cast)]
     mem[0x800..]
         .chunks(8)
         .map(|c| u64::from_le_bytes(c.try_into().unwrap()))

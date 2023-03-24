@@ -6,11 +6,13 @@ use memflow::architecture::arm::aarch64;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::types::{mem, umem, Address};
 
+#[allow(clippy::unnecessary_cast)]
 pub const PHYS_BASE: u64 = mem::gb(1) as u64;
 
 // mem here has to be a single page (4kb sized)
 fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
     // TODO: global define / config setting
+    #[allow(clippy::unnecessary_cast)]
     let max_mem = mem::gb(512) as u64;
 
     let pte = u64::from_le_bytes(mem[0..8].try_into().unwrap());
@@ -21,6 +23,7 @@ fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
 
     // Second half must have a self ref entry
     // This is usually enough to filter wrong data out
+    #[allow(clippy::unnecessary_cast)]
     mem[0x800..]
         .chunks(8)
         .map(|c| u64::from_le_bytes(c.try_into().unwrap()))

@@ -8,6 +8,7 @@ use memflow::types::{mem, umem, Address};
 
 use memflow::dataview::Pod;
 
+#[allow(clippy::unnecessary_cast)]
 const SIZE_4KB: u64 = mem::kb(4) as u64;
 
 /// The number of PhysicalMemoryRuns contained in the Header
