@@ -7,8 +7,8 @@ use std::collections::BTreeSet;
 
 pub type TypeSet = BTreeSet<pdb::TypeIndex>;
 
-pub fn type_name<'p>(
-    type_finder: &pdb::TypeFinder<'p>,
+pub fn type_name(
+    type_finder: &pdb::TypeFinder<'_>,
     type_index: pdb::TypeIndex,
     needed_types: &mut TypeSet,
 ) -> pdb::Result<String> {
@@ -83,15 +83,12 @@ pub fn type_name<'p>(
         pdb::TypeData::Array(data) => {
             let mut name = type_name(type_finder, data.element_type, needed_types)?;
             for size in data.dimensions {
-                name = format!("{}[{}]", name, size);
+                name = format!("{name}[{size}]");
             }
             name
         }
 
-        x => format!(
-            "Type{} /* TODO: figure out how to name it {x:?} */",
-            type_index
-        ),
+        x => format!("Type{type_index} /* TODO: figure out how to name it {x:?} */"),
     };
 
     // TODO: search and replace std:: patterns
@@ -286,8 +283,8 @@ impl<'p> Method<'p> {
     }
 }
 
-fn argument_list<'p>(
-    type_finder: &pdb::TypeFinder<'p>,
+fn argument_list(
+    type_finder: &pdb::TypeFinder<'_>,
     type_index: pdb::TypeIndex,
     needed_types: &mut TypeSet,
 ) -> pdb::Result<Vec<String>> {

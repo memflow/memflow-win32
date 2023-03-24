@@ -13,5 +13,5 @@ default-members = [
     "memflow-win32-defs",
 ]
 
-[patch.crates-io]
-memflow = { git = "https://github.com/memflow/memflow", branch = "main" }
+#[patch.crates-io]
+#memflow = { path = "../memflow/memflow" }

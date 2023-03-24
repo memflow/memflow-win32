@@ -8,7 +8,7 @@ use memflow::types::{mem, umem, Address};
 
 use memflow::dataview::Pod;
 
-const SIZE_4KB: u64 = mem::kb(4) as u64;
+const SIZE_4KB: u64 = mem::kb(4);
 
 /// The number of PhysicalMemoryRuns contained in the Header
 pub const PHYSICAL_MEMORY_MAX_RUNS: usize = 32;

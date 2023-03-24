@@ -75,7 +75,7 @@ pub fn main() {
         (
             Win32Version::new(10, 0, 19045),
             Win32OffsetsArchitecture::X64,
-            Win32Guid::new("ntkrnlmp.pdb", "5F0CF5D532F385333A9B4ABA25CA65961")
+            Win32Guid::new("ntkrnlmp.pdb", "5F0CF5D532F385333A9B4ABA25CA65961"),
         ),
         (
             Win32Version::new(10, 0, 19041),

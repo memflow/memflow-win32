@@ -134,7 +134,7 @@ fn embed_offsets() -> Result<(), Box<dyn Error>> {
                 match regenerate() {
                     Ok(x) => {
                         let mut file = File::create(&fp)?;
-                        file.write_all(&toml::to_vec(&x)?)?;
+                        file.write_all(toml::to_string(&x)?.as_bytes())?;
 
                         x
                     }

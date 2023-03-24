@@ -45,7 +45,7 @@ pub fn main() -> Result<()> {
                 let mut file = File::create(output).unwrap();
                 file.write_all(offsetstr.as_bytes()).unwrap();
             }
-            None => println!("{}", offsetstr),
+            None => println!("{offsetstr}"),
         }
     } else {
         error!("kernel version has to be valid in order to generate a offsets file");
