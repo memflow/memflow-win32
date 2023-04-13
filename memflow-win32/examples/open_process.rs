@@ -3,64 +3,51 @@ This example shows how to use a dynamically loaded connector in conjunction
 with memflow-win32. This example uses the `Inventory` feature of memflow
 but hard-wires the connector instance into the memflow-win32 OS layer.
 
-The example then dumps all the found offsets into the specified `output` file.
+The example showcases how to retrieve extended process info data,
+opening the process and getting a list of all modules.
 
 # Usage:
 ```bash
-cargo run --release --example dump_offsets -- -vv -c kvm --output file.toml
+cargo run --release --example open_process -- -vv -c kvm -p "explorer.exe"
 ```
 */
-use std::fs::File;
-use std::io::Write;
-
 use clap::*;
-use log::{error, Level};
+use log::{info, Level};
 
-use memflow::prelude::v1::{Result, *};
+use memflow::prelude::v1::*;
 use memflow_win32::prelude::v1::*;
 
 pub fn main() -> Result<()> {
     let matches = parse_args();
-    let (chain, output) = extract_args(&matches)?;
+    let (chain, process_name) = extract_args(&matches)?;
+    let process_name = process_name.unwrap_or("explorer.exe");
 
     // create inventory + connector
     let inventory = Inventory::scan();
     let connector = inventory.builder().connector_chain(chain).build()?;
 
-    let os = Win32Kernel::builder(connector)
+    let mut os = Win32Kernel::builder(connector)
         .build_default_caches()
         .build()
-        .unwrap();
+        .expect("unable to initialize memflow-win32");
 
-    let winver = os.kernel_info.kernel_winver;
+    // display the extended process info for the process
+    let process_info = os.process_info_by_name(process_name)?;
+    let process_info_ext = os.process_info_from_base_info(process_info.clone())?;
+    info!("{:?}", process_info_ext);
 
-    if winver != (0, 0).into() {
-        let guid = os.kernel_info.kernel_guid.unwrap_or_default();
-        let offsets = Win32OffsetFile {
-            header: Win32OffsetHeader {
-                pdb_file_name: guid.file_name.as_str().into(),
-                pdb_guid: guid.guid.as_str().into(),
+    // create a new process instance
+    let mut process = os
+        .into_process_by_info(process_info)
+        .expect("unable to open process");
 
-                arch: os.kernel_info.os_info.arch.into(),
+    // retrieve all modules
+    let module_list = process.module_list().expect("unable to read module list");
 
-                nt_major_version: winver.major_version(),
-                nt_minor_version: winver.minor_version(),
-                nt_build_number: winver.build_number(),
-            },
-            offsets: os.offsets.into(),
-        };
+    info!("{:>5} {:>10} {:^32} {:<}", "ADDR", "BASE", "NAME", "PATH");
 
-        // write offsets to file
-        let offsetstr = toml::to_string_pretty(&offsets).unwrap();
-        match output {
-            Some(output) => {
-                let mut file = File::create(output).unwrap();
-                file.write_all(offsetstr.as_bytes()).unwrap();
-            }
-            None => println!("{offsetstr}"),
-        }
-    } else {
-        error!("kernel version has to be valid in order to generate a offsets file");
+    for m in module_list {
+        info!("{:>5} {:^16} {:^32} {}", m.address, m.base, m.name, m.path);
     }
 
     Ok(())
@@ -78,7 +65,7 @@ fn parse_args() -> ArgMatches {
                 .required(true),
         )
         .arg(Arg::new("os").short('o').action(ArgAction::Append))
-        .arg(Arg::new("output").long("output").action(ArgAction::Set))
+        .arg(Arg::new("process").short('p').action(ArgAction::Set))
         .get_matches()
 }
 
@@ -115,6 +102,6 @@ fn extract_args(matches: &ArgMatches) -> Result<(ConnectorChain<'_>, Option<&str
 
     Ok((
         ConnectorChain::new(conn_iter, os_iter)?,
-        matches.get_one::<String>("output").map(String::as_str),
+        matches.get_one::<String>("process").map(String::as_str),
     ))
 }

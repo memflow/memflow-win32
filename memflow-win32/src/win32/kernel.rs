@@ -213,6 +213,14 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
         )?;
         trace!("dtb={:x}", dtb);
 
+        self.process_info_from_base_info_with_dtb(base_info, dtb)
+    }
+
+    pub fn process_info_from_base_info_with_dtb(
+        &mut self,
+        base_info: ProcessInfo,
+        dtb: Address,
+    ) -> Result<Win32ProcessInfo> {
         let section_base = self.virt_mem.read_addr_arch(
             self.kernel_info.os_info.arch.into(),
             base_info.address + self.offsets.eproc_section_base(),

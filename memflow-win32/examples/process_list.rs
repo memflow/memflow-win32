@@ -3,71 +3,52 @@ This example shows how to use a dynamically loaded connector in conjunction
 with memflow-win32. This example uses the `Inventory` feature of memflow
 but hard-wires the connector instance into the memflow-win32 OS layer.
 
-The example then dumps all the found offsets into the specified `output` file.
+The example is an adaption of the memflow core process list example:
+https://github.com/memflow/memflow/blob/next/memflow/examples/process_list.rs
 
 # Usage:
 ```bash
-cargo run --release --example dump_offsets -- -vv -c kvm --output file.toml
+cargo run --release --example process_list -- -vv -c kvm
 ```
 */
-use std::fs::File;
-use std::io::Write;
-
 use clap::*;
-use log::{error, Level};
+use log::{info, Level};
 
-use memflow::prelude::v1::{Result, *};
+use memflow::prelude::v1::*;
 use memflow_win32::prelude::v1::*;
 
 pub fn main() -> Result<()> {
     let matches = parse_args();
-    let (chain, output) = extract_args(&matches)?;
+    let chain = extract_args(&matches)?;
 
     // create inventory + connector
     let inventory = Inventory::scan();
     let connector = inventory.builder().connector_chain(chain).build()?;
 
-    let os = Win32Kernel::builder(connector)
+    let mut os = Win32Kernel::builder(connector)
         .build_default_caches()
         .build()
         .unwrap();
 
-    let winver = os.kernel_info.kernel_winver;
+    let process_list = os.process_info_list().expect("unable to read process list");
 
-    if winver != (0, 0).into() {
-        let guid = os.kernel_info.kernel_guid.unwrap_or_default();
-        let offsets = Win32OffsetFile {
-            header: Win32OffsetHeader {
-                pdb_file_name: guid.file_name.as_str().into(),
-                pdb_guid: guid.guid.as_str().into(),
+    info!(
+        "{:>5} {:>10} {:>10} {:<}",
+        "PID", "SYS ARCH", "PROC ARCH", "NAME"
+    );
 
-                arch: os.kernel_info.os_info.arch.into(),
-
-                nt_major_version: winver.major_version(),
-                nt_minor_version: winver.minor_version(),
-                nt_build_number: winver.build_number(),
-            },
-            offsets: os.offsets.into(),
-        };
-
-        // write offsets to file
-        let offsetstr = toml::to_string_pretty(&offsets).unwrap();
-        match output {
-            Some(output) => {
-                let mut file = File::create(output).unwrap();
-                file.write_all(offsetstr.as_bytes()).unwrap();
-            }
-            None => println!("{offsetstr}"),
-        }
-    } else {
-        error!("kernel version has to be valid in order to generate a offsets file");
+    for p in process_list {
+        info!(
+            "{:>5} {:^10} {:^10} {}",
+            p.pid, p.sys_arch, p.proc_arch, p.name
+        );
     }
 
     Ok(())
 }
 
 fn parse_args() -> ArgMatches {
-    Command::new("dump_offsets example")
+    Command::new("process_list example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::new("verbose").short('v').action(ArgAction::Count))
@@ -78,11 +59,10 @@ fn parse_args() -> ArgMatches {
                 .required(true),
         )
         .arg(Arg::new("os").short('o').action(ArgAction::Append))
-        .arg(Arg::new("output").long("output").action(ArgAction::Set))
         .get_matches()
 }
 
-fn extract_args(matches: &ArgMatches) -> Result<(ConnectorChain<'_>, Option<&str>)> {
+fn extract_args(matches: &ArgMatches) -> Result<ConnectorChain<'_>> {
     let log_level = match matches.get_count("verbose") {
         0 => Level::Error,
         1 => Level::Warn,
@@ -113,8 +93,5 @@ fn extract_args(matches: &ArgMatches) -> Result<(ConnectorChain<'_>, Option<&str
         .into_iter()
         .flatten();
 
-    Ok((
-        ConnectorChain::new(conn_iter, os_iter)?,
-        matches.get_one::<String>("output").map(String::as_str),
-    ))
+    ConnectorChain::new(conn_iter, os_iter)
 }
