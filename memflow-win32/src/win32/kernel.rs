@@ -184,8 +184,9 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
                 command_line: "".into(),
                 sys_arch: self.kernel_info.os_info.arch,
                 proc_arch: self.kernel_info.os_info.arch,
+                dtb1: self.sysproc_dtb,
+                dtb2: Address::invalid(),
             },
-            dtb: self.sysproc_dtb,
             section_base: Address::NULL, // TODO: see below
             ethread: Address::NULL,      // TODO: see below
             wow64: Address::NULL,
@@ -206,20 +207,6 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
     pub fn process_info_from_base_info(
         &mut self,
         base_info: ProcessInfo,
-    ) -> Result<Win32ProcessInfo> {
-        let dtb = self.virt_mem.read_addr_arch(
-            self.kernel_info.os_info.arch.into(),
-            base_info.address + self.offsets.kproc_dtb(),
-        )?;
-        trace!("dtb={:x}", dtb);
-
-        self.process_info_from_base_info_with_dtb(base_info, dtb)
-    }
-
-    pub fn process_info_from_base_info_with_dtb(
-        &mut self,
-        base_info: ProcessInfo,
-        dtb: Address,
     ) -> Result<Win32ProcessInfo> {
         let section_base = self.virt_mem.read_addr_arch(
             self.kernel_info.os_info.arch.into(),
@@ -290,13 +277,13 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
             base_info.address + self.offsets.eproc_vad_root(),
         )?;
 
-        // construct reader with process dtb
+        // construct reader with process dtb - win32 only uses/requires one dtb so we always store it in `dtb1`
         // TODO: can tlb be used here already?
         let (phys_mem, vat) = self.virt_mem.mem_vat_pair();
         let mut proc_reader = VirtualDma::with_vat(
             phys_mem.forward_mut(),
             base_info.proc_arch,
-            Win32VirtualTranslate::new(self.kernel_info.os_info.arch, dtb),
+            Win32VirtualTranslate::new(self.kernel_info.os_info.arch, base_info.dtb1),
             vat,
         );
 
@@ -326,7 +313,6 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
         Ok(Win32ProcessInfo {
             base_info,
 
-            dtb,
             section_base,
             ethread,
             wow64,
@@ -400,6 +386,12 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
     }
 
     fn process_info_base_by_address(&mut self, address: Address) -> Result<ProcessInfo> {
+        let dtb = self.virt_mem.read_addr_arch(
+            self.kernel_info.os_info.arch.into(),
+            address + self.offsets.kproc_dtb(),
+        )?;
+        trace!("dtb={:x}", dtb);
+
         let pid: Pid = self.virt_mem.read(address + self.offsets.eproc_pid())?;
         trace!("pid={}", pid);
 
@@ -462,6 +454,8 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
             command_line: "".into(),
             sys_arch,
             proc_arch,
+            dtb1: dtb,
+            dtb2: Address::invalid(),
         })
     }
 }

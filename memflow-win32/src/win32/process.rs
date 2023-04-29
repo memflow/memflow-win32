@@ -30,7 +30,6 @@ pub struct Win32ProcessInfo {
     pub base_info: ProcessInfo,
 
     // general information from eprocess
-    pub dtb: Address,
     pub section_base: Address,
     pub ethread: Address,
     pub wow64: Address,
@@ -93,7 +92,7 @@ impl Win32ProcessInfo {
     }
 
     pub fn translator(&self) -> Win32VirtualTranslate {
-        Win32VirtualTranslate::new(self.base_info.sys_arch, self.dtb)
+        Win32VirtualTranslate::new(self.base_info.sys_arch, self.base_info.dtb1)
     }
 }
 
@@ -162,8 +161,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTrans
 // TODO: implement VAD and rollback to the old bound!
 //impl<T: MemoryView> Process for Win32Process<T> {
 
-impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> Process
-    for Win32Process<T, V, D>
+impl<T: PhysicalMemory, V: VirtualTranslate2> Process
+    for Win32Process<T, V, Win32VirtualTranslate>
 {
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
@@ -181,6 +180,18 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> Process
         } else {
             ProcessState::Unknown
         }
+    }
+
+    /// Changes the dtb this process uses for memory translations
+    ///
+    /// # Remarks
+    ///
+    /// For memflow-win32 the second parameter should be set to `Address::invalid()`.
+    fn set_dtb(&mut self, dtb1: Address, _dtb2: Address) -> Result<()> {
+        self.proc_info.base_info.dtb1 = dtb1;
+        self.proc_info.base_info.dtb2 = Address::invalid();
+        self.virt_mem.set_translator(self.proc_info.translator());
+        Ok(())
     }
 
     /// Walks the process' module list and calls the provided callback for each module
