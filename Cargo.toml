@@ -2,7 +2,7 @@
 debug = true
 
 [workspace]
-resolver = "2"
+resolver = "1"
 
 members = [
     "memflow-win32",
