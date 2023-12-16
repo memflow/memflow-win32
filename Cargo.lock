@@ -721,7 +721,7 @@ dependencies = [
  "progress-streams",
  "serde",
  "simplelog",
- "toml 0.7.8",
+ "toml 0.8.8",
  "ureq",
 ]
 
