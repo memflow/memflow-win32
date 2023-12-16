@@ -12,5 +12,5 @@ default-members = [
     "memflow-win32-defs",
 ]
 
-#[patch.crates-io]
+# [patch.crates-io]
 # memflow = { path = "../memflow/memflow" }

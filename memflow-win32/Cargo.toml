@@ -58,3 +58,13 @@ download_progress = ["memflow-win32-defs/download_progress"]
 name = "dump_offsets"
 path = "examples/dump_offsets.rs"
 required-features = ["memflow/serde_derive"]
+
+[[example]]
+name = "open_process"
+path = "examples/open_process.rs"
+required-features = ["memflow/plugins"]
+
+[[example]]
+name = "process_list"
+path = "examples/process_list.rs"
+required-features = ["memflow/plugins"]
