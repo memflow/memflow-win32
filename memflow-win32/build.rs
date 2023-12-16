@@ -36,7 +36,7 @@ fn embed_offsets() -> Result<(), Box<dyn Error>> {
 
     let out_dir = env::var("OUT_DIR")?;
     let dest_path = Path::new(&out_dir).join("win32_offsets.bin");
-    let mut all_the_files = File::create(&dest_path)?;
+    let mut all_the_files = File::create(dest_path)?;
 
     // iterate offsets folder
     for f in fs::read_dir("./offsets")? {
