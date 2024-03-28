@@ -34,7 +34,7 @@ fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
     mem[0x800..]
         .chunks(8)
         .map(|c| u64::from_le_bytes(c.try_into().unwrap()))
-        .filter(|a| (a & 0xfff) == 0x703)
+        .filter(|a| (a & 0xff) == 0x03)
         .nth(5)?;
 
     Some(addr)
