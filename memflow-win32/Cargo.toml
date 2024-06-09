@@ -37,10 +37,10 @@ simplelog = "^0.12.0"
 rand = "^0.8.4"
 rand_xorshift = "^0.3.0"
 clap = { version = "^4.0.26", features = ["cargo"] }
-toml = "^0.7.3"
+toml = "0.8.14"
 
 [build_dependencies]
-toml = "^0.7.3"
+toml = "0.8.14"
 serde = { version = "^1.0.133", default-features = false, features = ["derive", "alloc"] }
 memflow = { version = "0.2", default-features = false }
 memflow-win32-defs = { version = "0.2", path = "../memflow-win32-defs", features = ["symstore"] }

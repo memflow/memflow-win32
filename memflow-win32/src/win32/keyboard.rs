@@ -120,10 +120,10 @@ impl<T> Win32Keyboard<T> {
         ref: https://www.unknowncheats.me/forum/3359384-post23.html
         Since Win11, key state bitmap has been moved into win32ksgd.sys
 
-        Previously, Windows 10's win32kfull.sys would store the key buffer in gafAsyncKeyState 
+        Previously, Windows 10's win32kfull.sys would store the key buffer in gafAsyncKeyState
         but, since Win11, the key buffer is now stored in win32ksgd.sys under gSessionGlobalSlots.
 
-        There is a global session slot for each session active on the machine so we need to offset 
+        There is a global session slot for each session active on the machine so we need to offset
         the list with the target session. Currently, it is hardcoded to Session 1.
 
         Win10 key presence test:
@@ -133,7 +133,7 @@ impl<T> Win32Keyboard<T> {
         Win11 key presence test:
 
         *(_BYTE *)((virtual_key_code >> 2) + SGDGetUserSessionState() + 0x3690) & (1 << (2 * (virtual_key_code & 3)))
-        
+
         It is worth exploring win32ksgd!SGDGetUserSessionState and win32ksgd!SGDGetSessionState
 
         __int64 SGDGetUserSessionState()
@@ -190,7 +190,7 @@ impl<T> Win32Keyboard<T> {
         let user_process_info = kernel.process_info_by_pid(pid)?;
         let user_process_info_win32 =
             kernel.process_info_from_base_info(user_process_info.clone())?;
-        
+
         // Win32k temporary session global driver was first introduced in 22H2 (10.0.22621.1) (2022-09-20)
         // so we cannot be sure it will be active on all Win11 devices
         if kernel.kernel_info.kernel_winver >= (10, 0, 22621).into() {
@@ -199,22 +199,46 @@ impl<T> Win32Keyboard<T> {
             let win32ksgd_module_info = kernel.module_by_name("WIN32KSGD.SYS")?;
             debug!("Found win32ksgd.sys: {:?}", win32ksgd_module_info);
 
-            let mut user_process: crate::win32::Win32Process<Fwd<&mut P>, Fwd<&mut V>, Win32VirtualTranslate> = kernel.process_by_info(user_process_info)?;
+            let mut user_process = kernel.process_by_info(user_process_info)?;
 
             let g_session_global_slots_offset = 0x3110;
-            debug!("gSessionGlobalSlot address: {:?}", win32ksgd_module_info.base + g_session_global_slots_offset);
+            debug!(
+                "gSessionGlobalSlot address: {:?}",
+                win32ksgd_module_info.base + g_session_global_slots_offset
+            );
 
-            let g_session_global_slot_first_deref = user_process.virt_mem.read_addr_arch(win32ksgd_module_info.arch.into(), win32ksgd_module_info.base + g_session_global_slots_offset)?;
-            debug!("gSessionGlobalSlot 1st deref: {:?}", g_session_global_slot_first_deref);
-            
-            let g_session_global_slot_second_deref = user_process.virt_mem.read_addr_arch(win32ksgd_module_info.arch.into(), g_session_global_slot_first_deref)?;
-            debug!("gSessionGlobalSlot 2nd deref: {:?}", g_session_global_slot_second_deref);
-            
-            let g_session_global_slot_third_deref = user_process.virt_mem.read_addr_arch(win32ksgd_module_info.arch.into(), g_session_global_slot_second_deref)?;
-            debug!("gSessionGlobalSlot 3rd deref: {:?}", g_session_global_slot_third_deref);
+            let g_session_global_slot_first_deref = user_process.virt_mem.read_addr_arch(
+                win32ksgd_module_info.arch.into(),
+                win32ksgd_module_info.base + g_session_global_slots_offset,
+            )?;
+            debug!(
+                "gSessionGlobalSlot 1st deref: {:?}",
+                g_session_global_slot_first_deref
+            );
 
-            debug!("Key State Buffer Address: {:?}",  g_session_global_slot_third_deref + 0x3690);
-            
+            let g_session_global_slot_second_deref = user_process.virt_mem.read_addr_arch(
+                win32ksgd_module_info.arch.into(),
+                g_session_global_slot_first_deref,
+            )?;
+            debug!(
+                "gSessionGlobalSlot 2nd deref: {:?}",
+                g_session_global_slot_second_deref
+            );
+
+            let g_session_global_slot_third_deref = user_process.virt_mem.read_addr_arch(
+                win32ksgd_module_info.arch.into(),
+                g_session_global_slot_second_deref,
+            )?;
+            debug!(
+                "gSessionGlobalSlot 3rd deref: {:?}",
+                g_session_global_slot_third_deref
+            );
+
+            debug!(
+                "Key State Buffer Address: {:?}",
+                g_session_global_slot_third_deref + 0x3690
+            );
+
             Ok((
                 user_process_info_win32,
                 g_session_global_slot_third_deref + 0x3690,
@@ -227,14 +251,16 @@ impl<T> Win32Keyboard<T> {
             );
 
             // TODO: lazy
-        let export_addr = Self::find_gaf_pe(&mut user_process.virt_mem, win32kbase_module_info)
-            .or_else(|_| Self::find_gaf_sig(&mut user_process.virt_mem, win32kbase_module_info))?;
+            let export_addr = Self::find_gaf_pe(&mut user_process.virt_mem, win32kbase_module_info)
+                .or_else(|_| {
+                    Self::find_gaf_sig(&mut user_process.virt_mem, win32kbase_module_info)
+                })?;
             debug!(
                 "found gaf signature in user proxy process `{}` at {:x}",
                 user_process.info().name.as_ref(),
                 export_addr
             );
-            
+
             Ok((
                 user_process_info_win32,
                 win32kbase_module_info.base + export_addr,
