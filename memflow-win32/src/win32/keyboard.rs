@@ -190,8 +190,10 @@ impl<T> Win32Keyboard<T> {
         let user_process_info = kernel.process_info_by_pid(pid)?;
         let user_process_info_win32 =
             kernel.process_info_from_base_info(user_process_info.clone())?;
-
-        if kernel.kernel_info.kernel_winver >= (10, 0, 22000).into() {
+        
+        // Win32k temporary session global driver was first introduced in 22H2 (10.0.22621.1) (2022-09-20)
+        // so we cannot be sure it will be active on all Win11 devices
+        if kernel.kernel_info.kernel_winver >= (10, 0, 22621).into() {
             debug!("Windows 11 detected.");
 
             let win32ksgd_module_info = kernel.module_by_name("WIN32KSGD.SYS")?;
@@ -217,7 +219,6 @@ impl<T> Win32Keyboard<T> {
                 user_process_info_win32,
                 g_session_global_slot_third_deref + 0x3690,
             ))
-
         } else {
             let mut user_process = kernel.process_by_info(user_process_info)?;
             debug!(
