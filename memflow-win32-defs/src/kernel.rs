@@ -35,28 +35,34 @@ impl Win32Version {
         }
     }
 
-    pub fn mask_build_number(mut self) -> Self {
+    #[inline]
+    pub const fn mask_build_number(mut self) -> Self {
         self.nt_build_number &= 0xFFFF;
         self
     }
 
-    pub fn major_version(&self) -> u32 {
+    #[inline]
+    pub const fn major_version(&self) -> u32 {
         self.nt_major_version
     }
 
-    pub fn minor_version(&self) -> u32 {
+    #[inline]
+    pub const fn minor_version(&self) -> u32 {
         self.nt_minor_version
     }
 
-    pub fn build_number(&self) -> u32 {
+    #[inline]
+    pub const fn build_number(&self) -> u32 {
         self.nt_build_number & 0xFFFF
     }
 
-    pub fn is_checked_build(&self) -> bool {
+    #[inline]
+    pub const fn is_checked_build(&self) -> bool {
         (self.nt_build_number & 0xF0000000) == 0xC0000000
     }
 
-    pub fn as_tuple(&self) -> (u32, u32, u32) {
+    #[inline]
+    pub const fn as_tuple(&self) -> (u32, u32, u32) {
         (
             self.major_version(),
             self.minor_version(),
@@ -73,8 +79,8 @@ impl PartialOrd for Win32Version {
 
 impl Ord for Win32Version {
     fn cmp(&self, other: &Win32Version) -> Ordering {
-        if self.nt_build_number != 0 && other.nt_build_number != 0 {
-            return self.nt_build_number.cmp(&other.nt_build_number);
+        if self.build_number() != 0 && other.build_number() != 0 {
+            return self.build_number().cmp(&other.build_number());
         }
 
         if self.nt_major_version != other.nt_major_version {
@@ -135,5 +141,19 @@ impl fmt::Display for Win32Version {
         } else {
             write!(f, "{}", self.build_number())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::cmp::Ordering;
+
+    use super::Win32Version;
+
+    #[test]
+    fn win32_version_cmp() {
+        let a = Win32Version::new(10, 0, 22621); // windows 11
+        let b = Win32Version::new(10, 0, 4026550885); // windows 10
+        assert_eq!(a.cmp(&b), Ordering::Greater);
     }
 }

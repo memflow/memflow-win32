@@ -410,7 +410,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
 
         let name: ReprCString = self
             .virt_mem
-            .read_char_array(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
+            .read_utf8_lossy(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
             .into();
         trace!("name={}", name);
 
