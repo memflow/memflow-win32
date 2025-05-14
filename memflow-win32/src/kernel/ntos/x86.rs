@@ -46,7 +46,7 @@ pub fn find<T: MemoryView>(virt_mem: &mut T, _start_block: &StartBlock) -> Resul
             let image_base = Address::from(base_addr + addr);
             if let Ok(name) = pehelper::try_get_pe_name(virt_mem, image_base) {
                 if name == muddy!("ntoskrnl.exe") {
-                    info!("{}",muddy!("ntoskrnl found"));
+                    info!("{}", muddy!("ntoskrnl found"));
                     // TODO: unify pe name + size
                     if let Ok(size_of_image) = pehelper::try_get_pe_size(virt_mem, image_base) {
                         return Ok((image_base, size_of_image));
@@ -56,6 +56,9 @@ pub fn find<T: MemoryView>(virt_mem: &mut T, _start_block: &StartBlock) -> Resul
         }
     }
 
-    Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound)
-        .log_trace(muddy!("find_x86(): unable to locate ntoskrnl.exe in high mem")))
+    Err(
+        Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound).log_trace(muddy!(
+            "find_x86(): unable to locate ntoskrnl.exe in high mem"
+        )),
+    )
 }

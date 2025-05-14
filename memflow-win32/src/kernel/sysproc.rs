@@ -53,8 +53,11 @@ pub fn find_exported<T: MemoryView>(
     {
         Export::Symbol(s) => kernel_base + *s as umem,
         Export::Forward(_) => {
-            return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
-                .log_info(muddy!("PsInitialSystemProcess found but it was a forwarded export")))
+            return Err(
+                Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(muddy!(
+                    "PsInitialSystemProcess found but it was a forwarded export"
+                )),
+            )
         }
     };
     info!("{tgt} found at 0x{:x}", sys_proc);

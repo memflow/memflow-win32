@@ -202,7 +202,11 @@ impl<T> Win32Keyboard<T> {
         let is_win11 = winver >= (10, 0, 22621).into();
         // let at_least_23_h2 = winver >= (10, 0, 22621).into();
         let at_least_24_h2 = winver >= (10, 0, 22632).into();
-        info!("Loading keyyboard for {} build {}", if is_win11 { "Win11" } else { "Win10" }, winver);
+        info!(
+            "Loading keyyboard for {} build {}",
+            if is_win11 { "Win11" } else { "Win10" },
+            winver
+        );
 
         if is_win11 {
             // Load for Windows 11
@@ -214,7 +218,7 @@ impl<T> Win32Keyboard<T> {
                 g_session_global_slots_signature,
                 target_kernel_module_name,
                 g_session_global_slots_offset_fallback,
-                key_state_offset_fallback
+                key_state_offset_fallback,
             ) = if at_least_24_h2 {
                 // win32ksgd actually may not even exist anymore here
                 // now it is stored in win32k.sys
@@ -266,15 +270,18 @@ impl<T> Win32Keyboard<T> {
                     sig = "48 8B 05 ? ? ? ? 48 8B 04 C8"; // todo: repalce with pelite sig
                 }
 
-                (sig, muddy!("WIN32KSGD.SYS"),0x3110, 0x36a8) // 0x3690 or 0x36a8 // 23h2 and below win32ksgd.sys + 0x3110
+                (sig, muddy!("WIN32KSGD.SYS"), 0x3110, 0x36a8) // 0x3690 or 0x36a8 // 23h2 and below win32ksgd.sys + 0x3110
             };
 
             // find either win32k.sys or win32ksgd.sys
-            let win32ksgd_module_info = match kernel.module_by_name(target_kernel_module_name){
+            let win32ksgd_module_info = match kernel.module_by_name(target_kernel_module_name) {
                 Ok(m) => m,
                 Err(_) => {
-                    return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound)
-                        .log_info(format!("unable to find kernel module {target_kernel_module_name}")))
+                    return Err(
+                        Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound).log_info(format!(
+                            "unable to find kernel module {target_kernel_module_name}"
+                        )),
+                    )
                 }
             };
 
@@ -291,13 +298,13 @@ impl<T> Win32Keyboard<T> {
             // };
             // kernel.module_list_callback(callback.into())?;
             // let win32ksgd_module_info = k_module?;
-        
+
             debug!("Found kernel module: {:?}", win32ksgd_module_info);
 
             // find the key states offset:
             // win32kbase.sys
             // b9 00 80 ff ff ? 22 B4 ? ? ? ? ? 41 -> + 9 -> rip rel32
-            
+
             /* 24H2
             +0x1a8da5  d3e6               shl     esi, cl
             +0x1a8da7  b90080ffff         mov     ecx, 0xffff8000
@@ -323,13 +330,19 @@ impl<T> Win32Keyboard<T> {
             let key_state_offset: umem;
             #[cfg(feature = "regex")]
             {
-                let module_buf = user_process.virt_mem
+                let module_buf = user_process
+                    .virt_mem
                     .read_raw(
                         win32kbase_module_info.base,
                         win32kbase_module_info.size.try_into().unwrap(),
                     )
                     .data_part()?;
-                key_state_offset = Self::scan_module_sig_val32(module_buf, ida_regex![b9 00 80 ff ff ? 22 B4 ? ? ? ? ? 41], 9).unwrap_or(key_state_offset_fallback);
+                key_state_offset = Self::scan_module_sig_val32(
+                    module_buf,
+                    ida_regex![b9 00 80 ff ff ? 22 B4 ? ? ? ? ? 41],
+                    9,
+                )
+                .unwrap_or(key_state_offset_fallback);
             }
 
             #[cfg(not(feature = "regex"))]
@@ -337,21 +350,24 @@ impl<T> Win32Keyboard<T> {
                 key_state_offset = key_state_offset_fallback
             };
 
-            let g_session_global_slots_address: Address;// = 
+            let g_session_global_slots_address: Address; // =
             #[cfg(feature = "regex")]
             {
-                g_session_global_slots_address = win32ksgd_module_info.base + Self::find_global_slots_sig(
-                    &mut user_process.virt_mem,
-                    &win32ksgd_module_info,
-                    g_session_global_slots_signature,
-                ).and_then(|offset| {
-                    // santity check
-                    Ok(if offset == 0 {
-                        g_session_global_slots_offset_fallback
-                    } else {
-                        offset
+                g_session_global_slots_address = win32ksgd_module_info.base
+                    + Self::find_global_slots_sig(
+                        &mut user_process.virt_mem,
+                        &win32ksgd_module_info,
+                        g_session_global_slots_signature,
+                    )
+                    .and_then(|offset| {
+                        // santity check
+                        Ok(if offset == 0 {
+                            g_session_global_slots_offset_fallback
+                        } else {
+                            offset
+                        })
                     })
-                }).unwrap_or(g_session_global_slots_offset_fallback);
+                    .unwrap_or(g_session_global_slots_offset_fallback);
                 // if res.is_null() {
                 //     g_session_global_slots_address = win32ksgd_module_info.base + g_session_global_slots_offset_fallback
                 // } else {
@@ -360,7 +376,8 @@ impl<T> Win32Keyboard<T> {
             };
             #[cfg(not(feature = "regex"))]
             {
-                g_session_global_slots_address = (win32ksgd_module_info.base + g_session_global_slots_offset_fallback);
+                g_session_global_slots_address =
+                    (win32ksgd_module_info.base + g_session_global_slots_offset_fallback);
             };
 
             debug!(
@@ -401,7 +418,7 @@ impl<T> Win32Keyboard<T> {
 
             debug!(
                 "Key State Buffer Address: {:?}",
-                g_session_global_slot_third_deref + key_state_offset// 0x3690  or 0x36a8 or 0x3808 (key_state_offset_fallback)
+                g_session_global_slot_third_deref + key_state_offset // 0x3690  or 0x36a8 or 0x3808 (key_state_offset_fallback)
             );
 
             Ok((
@@ -417,10 +434,10 @@ impl<T> Win32Keyboard<T> {
             );
 
             // TODO: lazy
-            let export_addr = Self::find_gaf_pe(&mut user_process.virt_mem, &win32kbase_module_info)
-                .or_else(|_| {
-                    Self::find_gaf_sig(&mut user_process.virt_mem, &win32kbase_module_info)
-                })?;
+            let export_addr =
+                Self::find_gaf_pe(&mut user_process.virt_mem, &win32kbase_module_info).or_else(
+                    |_| Self::find_gaf_sig(&mut user_process.virt_mem, &win32kbase_module_info),
+                )?;
             debug!(
                 "found gaf signature in user proxy process `{}` at {:x}",
                 user_process.info().name.as_ref(),
@@ -453,15 +470,21 @@ impl<T> Win32Keyboard<T> {
     //     let export_offs = buf_offs as u32
     //         + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
     //         + 0x4;
-        
+
     //     Ok(export_offs as umem)
     // }
 
     // returns the 32bit value in a the function assembly (instead of reading it as a RIP Relative (rel32) Address)
-    fn scan_module_sig_val32(module_buf: Vec<u8>, sig: &str, offset_to_val32: usize) -> Result<umem> {
+    fn scan_module_sig_val32(
+        module_buf: Vec<u8>,
+        sig: &str,
+        offset_to_val32: usize,
+    ) -> Result<umem> {
         use ::regex::bytes::*;
-        let re = Regex::new(sig)
-                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info(muddy!("malformed rip signature")))?;
+        let re = Regex::new(sig).map_err(|_| {
+            Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
+                .log_info(muddy!("malformed rip signature"))
+        })?;
         let buf_offs = re
             .find(module_buf.as_slice())
             .ok_or_else(|| {
@@ -531,7 +554,11 @@ impl<T> Win32Keyboard<T> {
         let export_offs = buf_offs as u32
             + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
             + 0x4;
-        debug!("{} export found at: {:x}", muddy!("gafAsyncKeyState"), export_offs);
+        debug!(
+            "{} export found at: {:x}",
+            muddy!("gafAsyncKeyState"),
+            export_offs
+        );
         Ok(export_offs as umem)
     }
 
@@ -551,8 +578,10 @@ impl<T> Win32Keyboard<T> {
             )
             .data_part()?;
 
-        let re = Regex::new(signature)
-                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info(muddy!("malformed gSessionGlobalSlots signature")))?;
+        let re = Regex::new(signature).map_err(|_| {
+            Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
+                .log_info(muddy!("malformed gSessionGlobalSlots signature"))
+        })?;
         let buf_offs = re
             .find(module_buf.as_slice())
             .ok_or_else(|| {
@@ -566,7 +595,11 @@ impl<T> Win32Keyboard<T> {
         let export_offs = buf_offs as u32
             + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
             + 0x4;
-        debug!("{} export found at: {:x}", muddy!("gSessionGlobalSlots"), export_offs);
+        debug!(
+            "{} export found at: {:x}",
+            muddy!("gSessionGlobalSlots"),
+            export_offs
+        );
         Ok(export_offs as umem)
     }
 

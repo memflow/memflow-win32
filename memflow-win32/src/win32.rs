@@ -7,11 +7,11 @@ pub use kernel_builder::Win32KernelBuilder;
 pub use kernel_info::Win32KernelInfo;
 
 pub mod keyboard;
-pub mod vkey;
 pub mod module;
 pub mod process;
 pub mod unicode_string;
 pub mod vat;
+pub mod vkey;
 
 pub use keyboard::*;
 pub use module::*;

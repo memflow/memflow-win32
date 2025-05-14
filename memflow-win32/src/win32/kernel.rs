@@ -142,13 +142,18 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
             let pe = PeView::from_bytes(&image).map_err(|err| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err)
             })?;
-            let addr = match pe.get_export_by_name(muddy!("PsLoadedModuleList")).map_err(|err| {
-                Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err)
-            })? {
+            let addr = match pe
+                .get_export_by_name(muddy!("PsLoadedModuleList"))
+                .map_err(|err| {
+                    Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err)
+                })? {
                 Export::Symbol(s) => self.kernel_info.os_info.base + *s as umem,
                 Export::Forward(_) => {
-                    return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
-                        .log_info(muddy!("PsLoadedModuleList found but it was a forwarded export")))
+                    return Err(
+                        Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(muddy!(
+                            "PsLoadedModuleList found but it was a forwarded export"
+                        )),
+                    )
                 }
             };
 

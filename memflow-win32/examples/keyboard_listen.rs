@@ -20,11 +20,15 @@ use memflow_win32::prelude::v1::*;
 
 pub fn main() -> Result<()> {
     let matches = parse_args();
-    let (chain,conn_args) = extract_args(&matches)?;
+    let (chain, conn_args) = extract_args(&matches)?;
 
     // create inventory + connector
     let inventory = Inventory::scan();
-    let connector = inventory.builder().connector_chain(chain).args(conn_args.parse()?).build()?;
+    let connector = inventory
+        .builder()
+        .connector_chain(chain)
+        .args(conn_args.parse()?)
+        .build()?;
 
     let os = Win32Kernel::builder(connector)
         .build_default_caches()
@@ -37,8 +41,7 @@ pub fn main() -> Result<()> {
     println!("Press LSHIFT to see if it is down");
     // listen for keyboard events until escape is pressed
     while !kb.is_down(vkey::VK_ESCAPE.into()) {
-        if kb.is_down(vkey::VK_LSHIFT.into())
-        {
+        if kb.is_down(vkey::VK_LSHIFT.into()) {
             println!("Left Shift is down");
         }
     }
@@ -67,7 +70,7 @@ fn parse_args() -> ArgMatches {
         .get_matches()
 }
 
-fn extract_args(matches: &ArgMatches) -> Result<(ConnectorChain<'_>,String)> {
+fn extract_args(matches: &ArgMatches) -> Result<(ConnectorChain<'_>, String)> {
     let log_level = match matches.get_count("verbose") {
         0 => Level::Error,
         1 => Level::Warn,
@@ -98,7 +101,10 @@ fn extract_args(matches: &ArgMatches) -> Result<(ConnectorChain<'_>,String)> {
         .into_iter()
         .flatten();
 
-    let conn_args = matches.get_one::<String>("connector_args").map(String::to_owned).unwrap_or(String::new());
+    let conn_args = matches
+        .get_one::<String>("connector_args")
+        .map(String::to_owned)
+        .unwrap_or(String::new());
 
     Ok((ConnectorChain::new(conn_iter, os_iter)?, conn_args))
 }
