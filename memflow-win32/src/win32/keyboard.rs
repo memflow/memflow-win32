@@ -193,7 +193,8 @@ impl<T> Win32Keyboard<T> {
 
         // Win32k temporary session global driver was first introduced in 22H2 (10.0.22621.1) (2022-09-20)
         // so we cannot be sure it will be active on all Win11 devices
-        if kernel.kernel_info.kernel_winver >= (10, 0, 22621).into() {
+        let winver = kernel.kernel_info.kernel_winver;
+        if winver >= (10, 0, 22621).into() {
             debug!("Windows 11 detected.");
 
             let win32ksgd_module_info = kernel.module_by_name("WIN32KSGD.SYS")?;
@@ -201,7 +202,12 @@ impl<T> Win32Keyboard<T> {
 
             let mut user_process = kernel.process_by_info(user_process_info)?;
 
-            let g_session_global_slots_offset = 0x3110;
+            let g_session_global_slots_offset = if winver.build_number() >= 26100 {
+                0x824F0 // 24H2
+            } else {
+                0x3110 // 23h2 and below
+            };
+
             debug!(
                 "gSessionGlobalSlot address: {:?}",
                 win32ksgd_module_info.base + g_session_global_slots_offset
@@ -236,7 +242,7 @@ impl<T> Win32Keyboard<T> {
 
             debug!(
                 "Key State Buffer Address: {:?}",
-                g_session_global_slot_third_deref + 0x3690
+                g_session_global_slot_third_deref + 0x3690 // or 0x36a8
             );
 
             Ok((
