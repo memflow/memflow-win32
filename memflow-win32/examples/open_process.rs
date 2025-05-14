@@ -13,6 +13,7 @@ cargo run --release --example open_process -- -vv -c kvm -p "explorer.exe"
 */
 use clap::*;
 use log::{info, Level};
+use muddy::muddy;
 
 use memflow::prelude::v1::*;
 use memflow_win32::prelude::v1::*;
@@ -20,7 +21,7 @@ use memflow_win32::prelude::v1::*;
 pub fn main() -> Result<()> {
     let matches = parse_args();
     let (chain, process_name) = extract_args(&matches)?;
-    let process_name = process_name.unwrap_or("explorer.exe");
+    let process_name = process_name.unwrap_or(muddy!("explorer.exe"));
 
     // create inventory + connector
     let inventory = Inventory::scan();

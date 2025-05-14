@@ -12,6 +12,8 @@ use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::MemoryView;
 use memflow::types::{size, umem, Address};
 
+use muddy::muddy;
+
 use pelite::{self, pe64::exports::Export, PeView};
 
 pub fn find<T: MemoryView>(
@@ -44,18 +46,18 @@ pub fn find_exported<T: MemoryView>(
     let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
     let pe = PeView::from_bytes(&image)
         .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err))?;
-
+    let tgt = muddy!("PsInitialSystemProcess");
     let sys_proc = match pe
-        .get_export_by_name("PsInitialSystemProcess")
+        .get_export_by_name(tgt)
         .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err))?
     {
         Export::Symbol(s) => kernel_base + *s as umem,
         Export::Forward(_) => {
             return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
-                .log_info("PsInitialSystemProcess found but it was a forwarded export"))
+                .log_info(muddy!("PsInitialSystemProcess found but it was a forwarded export")))
         }
     };
-    info!("PsInitialSystemProcess found at 0x{:x}", sys_proc);
+    info!("{tgt} found at 0x{:x}", sys_proc);
 
     let arch_obj: ArchitectureObj = start_block.arch.into();
 

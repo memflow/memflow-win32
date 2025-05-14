@@ -28,6 +28,7 @@ widestring = { version = "1.1", default-features = false, features = ["alloc"] }
 no-std-compat = { version = "0.4", features = ["alloc"] }
 serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
 memflow-win32-defs = { version = "0.2", path = "../memflow-win32-defs", default-features = false }
+muddy = "0.3.2"
 
 # will be replaced by our own signature scanner
 regex = { version = "1.11", optional = true }

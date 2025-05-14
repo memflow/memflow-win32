@@ -43,6 +43,8 @@ use memflow::types::{umem, Address};
 #[cfg(feature = "plugins")]
 use memflow::cglue;
 
+use muddy::muddy;
+
 use log::{debug, info};
 use std::convert::TryInto;
 
@@ -159,19 +161,21 @@ impl<T> Win32Keyboard<T> {
         To replicate this via DRM, we need to find our session's gSessionGlobalSlot, dereference the pointer three times, and add the 0x3690 hardcoded offset.
 
         */
-        let win32kbase_module_info = kernel.module_by_name("win32kbase.sys")?;
-        debug!("found win32kbase.sys: {:?}", win32kbase_module_info);
+
+        let win32kbase_mod_name = muddy!("win32kbase.sys");
+        let win32kbase_module_info: ModuleInfo = kernel.module_by_name(win32kbase_mod_name)?;
+        debug!("found {win32kbase_mod_name}: {:?}", win32kbase_module_info);
 
         let procs = kernel.process_info_list()?;
 
         let gaf = procs
             .iter()
             .filter(|p| {
-                p.name.as_ref() == "winlogon.exe"
-                    || p.name.as_ref() == "explorer.exe"
-                    || p.name.as_ref() == "taskhostw.exe"
-                    || p.name.as_ref() == "smartscreen.exe"
-                    || p.name.as_ref() == "dwm.exe"
+                p.name.as_ref() == muddy!("winlogon.exe")
+                    || p.name.as_ref() == muddy!("explorer.exe")
+                    || p.name.as_ref() == muddy!("taskhostw.exe")
+                    || p.name.as_ref() == muddy!("smartscreen.exe")
+                    || p.name.as_ref() == muddy!("dwm.exe")
             })
             .find_map(|p| Self::find_in_user_process(kernel, &win32kbase_module_info, p.pid).ok())
             .ok_or_else(|| {
@@ -206,7 +210,7 @@ impl<T> Win32Keyboard<T> {
                 g_session_global_slots_signature,
                 target_kernel_module_name,
                 g_session_global_slots_offset_fallback,
-                key_State_offset_fallback
+                key_state_offset_fallback
             ) = if winver.build_number() >= 26100 {
                 // win32ksgd actually may not even exist anymore here
                 // now it is stored in win32k.sys
@@ -232,7 +236,7 @@ impl<T> Win32Keyboard<T> {
                     sig = "48 8B 05 ? ? ? ? FF C9"; // todo: repalce with pelite sig
                 }
 
-                (sig, "WIN32K.SYS", 0x824F0, 0x3808) // 24H2  win32k.sys + 0x824F0
+                (sig, muddy!("WIN32K.SYS"), 0x824F0, 0x3808) // 24H2  win32k.sys + 0x824F0
             } else {
                 /*
                 +0x1260    int64_t SGDGetSessionState()
@@ -257,7 +261,7 @@ impl<T> Win32Keyboard<T> {
                     sig = "48 8B 05 ? ? ? ? 48 8B 04 C8"; // todo: repalce with pelite sig
                 }
 
-                (sig, "WIN32KSGD.SYS",0x3110, 0x3690) // 23h2 and below win32ksgd.sys + 0x3110
+                (sig, muddy!("WIN32KSGD.SYS"),0x3110, 0x3690) // 23h2 and below win32ksgd.sys + 0x3110
             };
 
             // find either win32k.sys or win32kgd.sys
@@ -294,7 +298,8 @@ impl<T> Win32Keyboard<T> {
             };
 
             debug!(
-                "gSessionGlobalSlot address: {:?}",
+                "{} address: {:?}",
+                muddy!("gSessionGlobalSlots"),
                 win32ksgd_module_info.base + g_session_global_slots_offset_fallback
             );
 
@@ -312,7 +317,8 @@ impl<T> Win32Keyboard<T> {
                 g_session_global_slot_first_deref,
             )?;
             debug!(
-                "gSessionGlobalSlot 2nd deref: {:?}",
+                "{} 2nd deref: {:?}",
+                muddy!("gSessionGlobalSlots"),
                 g_session_global_slot_second_deref
             );
 
@@ -321,18 +327,19 @@ impl<T> Win32Keyboard<T> {
                 g_session_global_slot_second_deref,
             )?;
             debug!(
-                "gSessionGlobalSlot 3rd deref: {:?}",
+                "{} 3rd deref: {:?}",
+                muddy!("gSessionGlobalSlots"),
                 g_session_global_slot_third_deref
             );
 
             debug!(
                 "Key State Buffer Address: {:?}",
-                g_session_global_slot_third_deref + 0x3690 // or 0x36a8 or 0x3808 (key_State_offset_fallback)
+                g_session_global_slot_third_deref + key_state_offset_fallback// 0x3690  or 0x36a8 or 0x3808 (key_state_offset_fallback)
             );
 
             Ok((
                 user_process_info_win32,
-                g_session_global_slot_third_deref + key_State_offset_fallback, // todo: signature scan for the key state offset
+                g_session_global_slot_third_deref + key_state_offset_fallback, // todo: signature scan for the key state offset
             ))
         } else {
             let mut user_process = kernel.process_by_info(user_process_info)?;
@@ -364,8 +371,9 @@ impl<T> Win32Keyboard<T> {
         win32kbase_module_info: &ModuleInfo,
     ) -> Result<umem> {
         let mut offset = None;
+        let gaf_name = muddy!("gafAsyncKeyState");
         let callback = &mut |export: ExportInfo| {
-            if export.name.as_ref() == "gafAsyncKeyState" {
+            if export.name.as_ref() == gaf_name {
                 offset = Some(export.offset);
                 false
             } else {
@@ -379,7 +387,7 @@ impl<T> Win32Keyboard<T> {
         )?;
         offset.ok_or_else(|| {
             Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
-                .log_info("unable to find gafAsyncKeyState")
+                .log_info(muddy!("unable to find gafAsyncKeyState"))
         })
     }
 
@@ -399,13 +407,13 @@ impl<T> Win32Keyboard<T> {
             .data_part()?;
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
-        let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
-                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info("malformed gafAsyncKeyState signature"))?;
+        let re = Regex::new(muddy!("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F"))
+                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info(muddy!("malformed gafAsyncKeyState signature")))?;
         let buf_offs = re
             .find(module_buf.as_slice())
             .ok_or_else(|| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
-                    .log_info("unable to find gafAsyncKeyState signature")
+                    .log_info(muddy!("unable to find gafAsyncKeyState signature"))
             })?
             .start()
             + 0x3;
@@ -414,7 +422,7 @@ impl<T> Win32Keyboard<T> {
         let export_offs = buf_offs as u32
             + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
             + 0x4;
-        debug!("gafAsyncKeyState export found at: {:x}", export_offs);
+        debug!("{} export found at: {:x}", muddy!("gafAsyncKeyState"), export_offs);
         Ok(export_offs as umem)
     }
 
@@ -435,12 +443,12 @@ impl<T> Win32Keyboard<T> {
             .data_part()?;
 
         let re = Regex::new(signature)
-                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info("malformed gSessionGlobalSlots signature"))?;
+                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info(muddy!("malformed gSessionGlobalSlots signature")))?;
         let buf_offs = re
             .find(module_buf.as_slice())
             .ok_or_else(|| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
-                    .log_info("unable to find gSessionGlobalSlots signature")
+                    .log_info(muddy!("unable to find gSessionGlobalSlots signature"))
             })?
             .start()
             + 0x3;
@@ -449,7 +457,7 @@ impl<T> Win32Keyboard<T> {
         let export_offs = buf_offs as u32
             + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
             + 0x4;
-        debug!("gSessionGlobalSlots export found at: {:x}", export_offs);
+        debug!("{} export found at: {:x}", muddy!("gSessionGlobalSlots"), export_offs);
         Ok(export_offs as umem)
     }
 
