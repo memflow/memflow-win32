@@ -1,14 +1,15 @@
 /*!
 This example shows how to use a dynamically loaded connector in conjunction
-with memflow-win32. This example uses the `Inventory` feature of memflow
-but hard-wires the connector instance into the memflow-win32 OS layer.
+with memflow-win32 to read the key-states of a windows computer.
+This example uses the `Inventory` feature of memflow but hard-wires the
+connector instance into the memflow-win32 OS layer.
 
 The example is an adaption of the memflow core process list example:
 https://github.com/memflow/memflow/blob/next/memflow/examples/process_list.rs
 
 # Usage:
 ```bash
-cargo run --release --example process_list -- -vv -c kvm
+cargo run --release --example keyboard_listen -- -vv -c kvm
 ```
 */
 use clap::*;
@@ -19,11 +20,11 @@ use memflow_win32::prelude::v1::*;
 
 pub fn main() -> Result<()> {
     let matches = parse_args();
-    let chain = extract_args(&matches)?;
+    let (chain,conn_args) = extract_args(&matches)?;
 
     // create inventory + connector
     let inventory = Inventory::scan();
-    let connector = inventory.builder().connector_chain(chain).build()?;
+    let connector = inventory.builder().connector_chain(chain).args(conn_args.parse()?).build()?;
 
     let os = Win32Kernel::builder(connector)
         .build_default_caches()
@@ -31,12 +32,14 @@ pub fn main() -> Result<()> {
         .unwrap();
 
     let mut kb = os.into_keyboard()?;
-
+    println!("Running keyboard listener...\n...............................");
+    println!("Press ESC to exit");
+    println!("Press LSHIFT to see if it is down");
     // listen for keyboard events until escape is pressed
     while !kb.is_down(vkey::VK_ESCAPE.into()) {
         if kb.is_down(vkey::VK_LSHIFT.into())
         {
-            info!("Left Shift is down");
+            println!("Left Shift is down");
         }
     }
 
@@ -54,11 +57,17 @@ fn parse_args() -> ArgMatches {
                 .action(ArgAction::Append)
                 .required(true),
         )
+        .arg(
+            Arg::new("connector_args")
+                .short('a')
+                .action(ArgAction::Append)
+                .required(false),
+        )
         .arg(Arg::new("os").short('o').action(ArgAction::Append))
         .get_matches()
 }
 
-fn extract_args(matches: &ArgMatches) -> Result<ConnectorChain<'_>> {
+fn extract_args(matches: &ArgMatches) -> Result<(ConnectorChain<'_>,String)> {
     let log_level = match matches.get_count("verbose") {
         0 => Level::Error,
         1 => Level::Warn,
@@ -89,5 +98,7 @@ fn extract_args(matches: &ArgMatches) -> Result<ConnectorChain<'_>> {
         .into_iter()
         .flatten();
 
-    ConnectorChain::new(conn_iter, os_iter)
+    let conn_args = matches.get_one::<String>("connector_args").map(String::to_owned).unwrap_or(String::new());
+
+    Ok((ConnectorChain::new(conn_iter, os_iter)?, conn_args))
 }
