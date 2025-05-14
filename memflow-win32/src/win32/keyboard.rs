@@ -162,10 +162,6 @@ impl<T> Win32Keyboard<T> {
 
         */
 
-        let win32kbase_mod_name = muddy!("win32kbase.sys");
-        let win32kbase_module_info: ModuleInfo = kernel.module_by_name(win32kbase_mod_name)?;
-        debug!("found {win32kbase_mod_name}: {:?}", win32kbase_module_info);
-
         let procs = kernel.process_info_list()?;
 
         let gaf = procs
@@ -177,7 +173,7 @@ impl<T> Win32Keyboard<T> {
                     || p.name.as_ref() == muddy!("smartscreen.exe")
                     || p.name.as_ref() == muddy!("dwm.exe")
             })
-            .find_map(|p| Self::find_in_user_process(kernel, &win32kbase_module_info, p.pid).ok())
+            .find_map(|p| Self::find_in_user_process(kernel, p.pid).ok())
             .ok_or_else(|| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                     .log_info("unable to find any proxy process that contains gafAsyncKeyState")
@@ -191,7 +187,6 @@ impl<T> Win32Keyboard<T> {
         V: 'static + VirtualTranslate2 + Clone,
     >(
         kernel: &mut Win32Kernel<P, V>,
-        win32kbase_module_info: &ModuleInfo,
         pid: Pid,
     ) -> Result<(Win32ProcessInfo, Address)> {
         let user_process_info = kernel.process_info_by_pid(pid)?;
@@ -202,8 +197,13 @@ impl<T> Win32Keyboard<T> {
         // so we cannot be sure it will be active on all Win11 devices
         let winver = kernel.kernel_info.kernel_winver;
         let is_win11 = winver >= (10, 0, 22621).into();
+        // let at_least_23_h2 = winver >= (10, 0, 22621).into();
+        let at_least_24_h2 = winver >= (10, 0, 22632).into();
         info!("Loading keyyboard for {} build {}", if is_win11 { "Win11" } else { "Win10" }, winver);
         if is_win11 {
+            // Load for Windows 11
+            // On Windows 11 there are special cases to handle on the border of 23h2 and 24h2
+
             // offset from module base of gSessionGlobalSlots in win32k.sys (24h2) or win32ksgd.sys (on 23h2)
             // todo add a signature scan for this and use this behaviour as a fallback
             let (
@@ -211,7 +211,7 @@ impl<T> Win32Keyboard<T> {
                 target_kernel_module_name,
                 g_session_global_slots_offset_fallback,
                 key_state_offset_fallback
-            ) = if winver.build_number() >= 26100 {
+            ) = if at_least_24_h2 {
                 // win32ksgd actually may not even exist anymore here
                 // now it is stored in win32k.sys
                 /*
@@ -236,7 +236,7 @@ impl<T> Win32Keyboard<T> {
                     sig = "48 8B 05 ? ? ? ? FF C9"; // todo: repalce with pelite sig
                 }
 
-                (sig, muddy!("WIN32K.SYS"), 0x824F0, 0x3808) // 24H2  win32k.sys + 0x824F0
+                (sig, muddy!("win32k.sys"), 0x824F0, 0x3808) // 24H2  win32k.sys + 0x824F0
             } else {
                 /*
                 +0x1260    int64_t SGDGetSessionState()
@@ -249,6 +249,7 @@ impl<T> Win32Keyboard<T> {
                 +0x128f  c3                 retn     {__return_addr}
 
                  */
+                // signature for 23h2
                 // 48 8B 05 ? ? ? ? 48 8B 04 C8 + 3 -> rel32 deref
 
                 let sig;
@@ -264,11 +265,19 @@ impl<T> Win32Keyboard<T> {
                 (sig, muddy!("WIN32KSGD.SYS"),0x3110, 0x3690) // 23h2 and below win32ksgd.sys + 0x3110
             };
 
-            // find either win32k.sys or win32kgd.sys
-            let win32ksgd_module_info = kernel.module_by_name(target_kernel_module_name)?;
+            // find either win32k.sys or win32ksgd.sys
+            let win32ksgd_module_info = match kernel.module_by_name(target_kernel_module_name){
+                Ok(m) => m,
+                Err(_) => {
+                    return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound)
+                        .log_info(format!("unable to find kernel module {target_kernel_module_name}")))
+                }
+            };
             // let mut k_module= Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
             // let callback = &mut |data: ModuleInfo| {
-            //     if data.name.as_ref() == "WIN32KSGD.SYS" || data.name.as_ref() == "WIN32K.SYS" {
+            //     // if data.name.as_ref() == "WIN32KSGD.SYS" || data.name.as_ref() == "WIN32K.SYS" {
+            //     // log::info!("compare module name: {:?}", data.name.as_ref());
+            //     if data.name.as_ref() == target_kernel_module_name {
             //         k_module = Ok(data);
             //         false
             //     } else {
@@ -277,7 +286,6 @@ impl<T> Win32Keyboard<T> {
             // };
             // kernel.module_list_callback(callback.into())?;
             // let win32ksgd_module_info = k_module?;
-
         
             debug!("Found kernel module: {:?}", win32ksgd_module_info);
 
@@ -286,11 +294,23 @@ impl<T> Win32Keyboard<T> {
             let g_session_global_slots_address: Address;// = 
             #[cfg(feature = "regex")]
             {
-                g_session_global_slots_address = Self::find_global_slots_sig(
+                g_session_global_slots_address = win32ksgd_module_info.base + Self::find_global_slots_sig(
                     &mut user_process.virt_mem,
                     &win32ksgd_module_info,
                     g_session_global_slots_signature,
-                ).unwrap_or(win32ksgd_module_info.base.to_umem() + g_session_global_slots_offset_fallback).into();
+                ).and_then(|offset| {
+                    // santity check
+                    Ok(if offset == 0 {
+                        g_session_global_slots_offset_fallback
+                    } else {
+                        offset
+                    })
+                }).unwrap_or(g_session_global_slots_offset_fallback);
+                // if res.is_null() {
+                //     g_session_global_slots_address = win32ksgd_module_info.base + g_session_global_slots_offset_fallback
+                // } else {
+                //     g_session_global_slots_address = res;
+                // }
             };
             #[cfg(not(feature = "regex"))]
             {
@@ -298,9 +318,10 @@ impl<T> Win32Keyboard<T> {
             };
 
             debug!(
-                "{} address: {:?}",
+                "{} address: {:?} : {:?}",
                 muddy!("gSessionGlobalSlots"),
-                win32ksgd_module_info.base + g_session_global_slots_offset_fallback
+                win32ksgd_module_info.base + g_session_global_slots_offset_fallback,
+                g_session_global_slots_address
             );
 
             let g_session_global_slot_first_deref = user_process.virt_mem.read_addr_arch(
@@ -342,6 +363,12 @@ impl<T> Win32Keyboard<T> {
                 g_session_global_slot_third_deref + key_state_offset_fallback, // todo: signature scan for the key state offset
             ))
         } else {
+            // Load for Windows 10
+
+            let win32kbase_mod_name = muddy!("win32kbase.sys");
+            let win32kbase_module_info: ModuleInfo = kernel.module_by_name(win32kbase_mod_name)?;
+            debug!("found {win32kbase_mod_name}: {:?}", win32kbase_module_info);
+
             let mut user_process = kernel.process_by_info(user_process_info)?;
             debug!(
                 "trying to find gaf signature in user proxy process `{}`",
@@ -349,9 +376,9 @@ impl<T> Win32Keyboard<T> {
             );
 
             // TODO: lazy
-            let export_addr = Self::find_gaf_pe(&mut user_process.virt_mem, win32kbase_module_info)
+            let export_addr = Self::find_gaf_pe(&mut user_process.virt_mem, &win32kbase_module_info)
                 .or_else(|_| {
-                    Self::find_gaf_sig(&mut user_process.virt_mem, win32kbase_module_info)
+                    Self::find_gaf_sig(&mut user_process.virt_mem, &win32kbase_module_info)
                 })?;
             debug!(
                 "found gaf signature in user proxy process `{}` at {:x}",
