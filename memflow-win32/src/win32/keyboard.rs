@@ -43,7 +43,7 @@ use memflow::types::{umem, Address};
 #[cfg(feature = "plugins")]
 use memflow::cglue;
 
-use log::debug;
+use log::{debug, info};
 use std::convert::TryInto;
 
 #[cfg(feature = "plugins")]
@@ -197,9 +197,9 @@ impl<T> Win32Keyboard<T> {
         // Win32k temporary session global driver was first introduced in 22H2 (10.0.22621.1) (2022-09-20)
         // so we cannot be sure it will be active on all Win11 devices
         let winver = kernel.kernel_info.kernel_winver;
-        if winver >= (10, 0, 22621).into() {
-            debug!("Windows 11 detected.");
-
+        let is_win11 = winver >= (10, 0, 22621).into();
+        info!("Loading keyyboard for {} build {}", if is_win11 { "Win11" } else { "Win10" }, winver);
+        if is_win11 {
             // offset from module base of gSessionGlobalSlots in win32k.sys (24h2) or win32ksgd.sys (on 23h2)
             // todo add a signature scan for this and use this behaviour as a fallback
             let (
