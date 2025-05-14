@@ -302,4 +302,4 @@ pub const VK_XBUTTON2: VKEY = VKEY(6u16);
 pub const VK_Y: VKEY = VKEY(89u16);
 pub const VK_Z: VKEY = VKEY(90u16);
 pub const VK_ZOOM: VKEY = VKEY(251u16);
-pub const VK__none_: VKEY = VKEY(255u16);
+pub const VK_NONE: VKEY = VKEY(255u16);

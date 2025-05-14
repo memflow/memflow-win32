@@ -1,5 +1,3 @@
-use regex::Regex;
-
 /// Generates a regex string from an ida-like hex string.
 /// Made by [@ConnorBP] :)
 /// Main benefit of this is that you can directly use your ida signatures,
@@ -7,6 +5,8 @@ use regex::Regex;
 /// 
 /// Example Usage:
 /// ```
+/// use regex::Regex;
+/// use memflow_win32::ida_regex;
 /// const REGEX_PATTERN: &str = ida_regex![4C 8B ? ? ? ? 3C 9F];
 /// let re = Regex::new(REGEX_PATTERN).unwrap();
 /// assert_eq!(REGEX_PATTERN, "(?-u)\\x4C\\x8B(?s:.){4}\\x3C\\x9F");

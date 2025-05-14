@@ -13,7 +13,7 @@ cargo run --release --example keyboard_listen -- -vv -c kvm
 ```
 */
 use clap::*;
-use log::{info, Level};
+use log::Level;
 
 use memflow::prelude::v1::*;
 use memflow_win32::prelude::v1::*;
