@@ -3,10 +3,18 @@ use core::ops::{Deref, DerefMut};
 /// Windows Virtual Key Codes
 /// Based on the windows rust api https://microsoft.github.io/windows-docs-rs/doc/windows/Win32/UI/Input/KeyboardAndMouse/
 /// except more flexible and cross platform
-pub const UMLAUT: u32 = 776u32;
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct VKEY(pub u16);
+
+/// auto implement Display based on actual enum name
+/// Utilizes the Debug trait to print the enum name
+/// This works better on enum types.
+impl std::fmt::Display for VKEY {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 
 impl Deref for VKEY {
     type Target = u16;
@@ -49,6 +57,28 @@ impl From<i32> for VKEY {
 impl From<VKEY> for i32 {
     fn from(vk: VKEY) -> Self {
         vk.0 as i32
+    }
+}
+
+/// Iterate over a range of VKEYs (inclusive start, exclusive end)
+/// Placeholder until we can use the `Step` trait
+/// in a stable way
+pub fn vkey_range(start: VKEY, end: VKEY) -> impl Iterator<Item = VKEY> {
+    (start.0..end.0).map(VKEY)
+}
+
+#[cfg(all(feature = "nightly", nightly))]
+use std::{iter::Step};
+#[cfg(all(feature = "nightly", nightly))]
+impl std::iter::Step for VKEY {
+    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+        u16::steps_between(&start.0, &end.0)
+    }
+    fn forward_checked(start: Self, count: usize) -> Option<Self> {
+        u16::forward_checked(start.0, count).map(VKEY)
+    }
+    fn backward_checked(start: Self, count: usize) -> Option<Self> {
+        u16::backward_checked(start.0, count).map(VKEY)
     }
 }
 

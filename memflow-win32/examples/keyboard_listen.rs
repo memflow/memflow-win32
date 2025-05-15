@@ -16,7 +16,7 @@ use clap::*;
 use log::Level;
 
 use memflow::prelude::v1::*;
-use memflow_win32::prelude::v1::*;
+use memflow_win32::{prelude::v1::*, win32::vkey::*};
 
 pub fn main() -> Result<()> {
     let matches = parse_args();
@@ -36,13 +36,34 @@ pub fn main() -> Result<()> {
         .unwrap();
 
     let mut kb = os.into_keyboard()?;
-    println!("Running keyboard listener...\n...............................");
+    println!("Running keyboard example...\n...............................");
+
+    println!("Checking all keys...");
+
+    for k in vkey_range(VK_LBUTTON, VK_NONE) {
+        let down = if kb.is_down(k.into()) { "down" } else { "up" };
+        println!("Key {k} is {down}");
+    }
+
+    println!("Starting keyboard listener...");
+
     println!("Press ESC to exit");
-    println!("Press LSHIFT to see if it is down");
+    println!("Press any key to see if it reads out here");
     // listen for keyboard events until escape is pressed
-    while !kb.is_down(vkey::VK_ESCAPE.into()) {
-        if kb.is_down(vkey::VK_LSHIFT.into()) {
-            println!("Left Shift is down");
+    'listener: loop {
+        for k in vkey_range(VK_LBUTTON, VK_NONE) {
+            // check escape first each time for responsiveness
+            if kb.is_down(vkey::VK_ESCAPE.into()) {
+                println!("Escape pressed, exiting...");
+                break 'listener;
+            }
+            if kb.is_down(k.into()) {
+                println!("Key {k} is down");
+                // sleep for a bit to avoid spamming
+                // note: this is for example purposes only, in a real application
+                // you would probably not want to block the thread like this
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
         }
     }
 
