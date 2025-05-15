@@ -278,7 +278,7 @@ impl<T> Win32Keyboard<T> {
                 Ok(m) => m,
                 Err(_) => {
                     return Err(
-                        Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound).log_info(format!(
+                        Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound).log_info(format_args!(
                             "unable to find kernel module {target_kernel_module_name}"
                         )),
                     )
@@ -475,6 +475,7 @@ impl<T> Win32Keyboard<T> {
     // }
 
     // returns the 32bit value in a the function assembly (instead of reading it as a RIP Relative (rel32) Address)
+    #[cfg(feature = "regex")]
     fn scan_module_sig_val32(
         module_buf: Vec<u8>,
         sig: &str,
