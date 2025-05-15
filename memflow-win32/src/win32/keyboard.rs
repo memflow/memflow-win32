@@ -243,7 +243,7 @@ impl<T> Win32Keyboard<T> {
                 {
                     return Err(
                         Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
-                        .log_error("signature scanning requires regex")
+                        .log_error("cannot find keyboard signature because regex feature is disabled")
                     ); // todo: repalce with pelite sig
                 }
                 
@@ -273,7 +273,7 @@ impl<T> Win32Keyboard<T> {
                 {
                     return Err(
                         Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
-                        .log_error("signature scanning requires regex")
+                        .log_error("cannot find keyboard signature because regex feature is disabled")
                     ); // todo: repalce with pelite sig
                 }
 
@@ -577,7 +577,7 @@ impl<T> Win32Keyboard<T> {
     ) -> Result<umem> {
         Err(
             Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
-                .log_error("signature scanning requires std"),
+                .log_error("cannot find keyboard signature because regex feature is disabled"),
         )
     }
 
@@ -588,7 +588,7 @@ impl<T> Win32Keyboard<T> {
     ) -> Result<umem> {
         Err(
             Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
-                .log_error("signature scanning requires std"),
+                .log_error("cannot find keyboard signature because regex feature is disabled"),
         )
     }
 }
