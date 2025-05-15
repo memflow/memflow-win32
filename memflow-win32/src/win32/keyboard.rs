@@ -241,8 +241,12 @@ impl<T> Win32Keyboard<T> {
                 }
                 #[cfg(not(feature = "regex"))]
                 {
-                    sig = "48 8B 05 ? ? ? ? FF C9"; // todo: repalce with pelite sig
+                    return Err(
+                        Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
+                        .log_error("signature scanning requires regex")
+                    ); // todo: repalce with pelite sig
                 }
+                
 
                 (sig, muddy!("win32k.sys"), 0x824F0, 0x3808) // 24H2  win32k.sys + 0x824F0
             } else {
@@ -267,7 +271,10 @@ impl<T> Win32Keyboard<T> {
                 }
                 #[cfg(not(feature = "regex"))]
                 {
-                    sig = "48 8B 05 ? ? ? ? 48 8B 04 C8"; // todo: repalce with pelite sig
+                    return Err(
+                        Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
+                        .log_error("signature scanning requires regex")
+                    ); // todo: repalce with pelite sig
                 }
 
                 (sig, muddy!("WIN32KSGD.SYS"), 0x3110, 0x36a8) // 0x3690 or 0x36a8 // 23h2 and below win32ksgd.sys + 0x3110
