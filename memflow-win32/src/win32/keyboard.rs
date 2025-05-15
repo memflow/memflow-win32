@@ -278,9 +278,9 @@ impl<T> Win32Keyboard<T> {
                 Ok(m) => m,
                 Err(_) => {
                     return Err(
-                        Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound).log_info(format_args!(
-                            "unable to find kernel module {target_kernel_module_name}"
-                        )),
+                        Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound).log_info(
+                            ["unable to find kernel module", target_kernel_module_name].join(" ")
+                        ),
                     )
                 }
             };
