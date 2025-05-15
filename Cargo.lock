@@ -884,7 +884,7 @@ dependencies = [
 
 [[package]]
 name = "memflow-win32"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap",
  "log",
@@ -904,7 +904,7 @@ dependencies = [
 
 [[package]]
 name = "memflow-win32-defs"
-version = "0.2.1"
+version = "0.2.0"
 dependencies = [
  "clap",
  "dirs",
