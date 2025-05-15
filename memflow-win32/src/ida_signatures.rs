@@ -1,5 +1,4 @@
 /// Generates a regex string from an ida-like hex string.
-/// Made by [@ConnorBP] :)
 /// Main benefit of this is that you can directly use your ida signatures,
 /// while not needing to decode them at runtime or manually beforehand.
 ///
