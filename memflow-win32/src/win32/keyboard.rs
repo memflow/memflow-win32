@@ -285,20 +285,6 @@ impl<T> Win32Keyboard<T> {
                 }
             };
 
-            // let mut k_module= Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
-            // let callback = &mut |data: ModuleInfo| {
-            //     // if data.name.as_ref() == "WIN32KSGD.SYS" || data.name.as_ref() == "WIN32K.SYS" {
-            //     // log::info!("compare module name: {:?}", data.name.as_ref());
-            //     if data.name.as_ref() == target_kernel_module_name {
-            //         k_module = Ok(data);
-            //         false
-            //     } else {
-            //         true
-            //     }
-            // };
-            // kernel.module_list_callback(callback.into())?;
-            // let win32ksgd_module_info = k_module?;
-
             debug!("Found kernel module: {:?}", win32ksgd_module_info);
 
             // find the key states offset:
@@ -368,11 +354,6 @@ impl<T> Win32Keyboard<T> {
                         })
                     })
                     .unwrap_or(g_session_global_slots_offset_fallback);
-                // if res.is_null() {
-                //     g_session_global_slots_address = win32ksgd_module_info.base + g_session_global_slots_offset_fallback
-                // } else {
-                //     g_session_global_slots_address = res;
-                // }
             };
             #[cfg(not(feature = "regex"))]
             {
@@ -451,30 +432,7 @@ impl<T> Win32Keyboard<T> {
         }
     }
 
-    /// Returns offset to what was pointed to by the relative instruction
-    // fn scan_module_sig_rip(module_buf: Vec<u8>, sig: &str, offset_to_rel32: usize) -> Result<umem> {
-    //     use ::regex::bytes::*;
-    //     // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
-    //     let re = Regex::new(sig)
-    //                 .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info(muddy!("malformed rip signature")))?;
-    //     let buf_offs = re
-    //         .find(module_buf.as_slice())
-    //         .ok_or_else(|| {
-    //             Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
-    //                 .log_info(muddy!("unable to find rip signature"))
-    //         })?
-    //         .start()
-    //         + offset_to_rel32; // this is most often 0x3
-
-    //     // compute rip relative addr
-    //     let export_offs = buf_offs as u32
-    //         + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
-    //         + 0x4;
-
-    //     Ok(export_offs as umem)
-    // }
-
-    // returns the 32bit value in a the function assembly (instead of reading it as a RIP Relative (rel32) Address)
+    /// returns the 32bit value in a the function assembly (instead of reading it as a RIP Relative (rel32) Address)
     #[cfg(feature = "regex")]
     fn scan_module_sig_val32(
         module_buf: Vec<u8>,
