@@ -505,7 +505,7 @@ impl<T> Win32Keyboard<T> {
             .data_part()?;
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
-        let re = Regex::new(muddy!("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F"))
+        let re = Regex::new(ida_regex![48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F])
                     .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info(muddy!("malformed gafAsyncKeyState signature")))?;
         let buf_offs = re
             .find(module_buf.as_slice())
