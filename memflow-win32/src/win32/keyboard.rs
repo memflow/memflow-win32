@@ -234,7 +234,7 @@ impl<T> Win32Keyboard<T> {
                 // 48 8B 05 ? ? ? ? FF C9 + 3 -> rel32 deref
                 // or 48 8B 05 ? ? ? ? FF C9 48 8B 04 C8 + 3 -> rel32 deref
 
-                let sig;
+                let sig: &'static str;
                 #[cfg(feature = "regex")]
                 {
                     sig = ida_regex![48 8B 05 ? ? ? ? FF C9];
