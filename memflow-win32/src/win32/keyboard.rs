@@ -203,7 +203,7 @@ impl<T> Win32Keyboard<T> {
         // let at_least_23_h2 = winver >= (10, 0, 22621).into();
         let at_least_24_h2 = winver >= (10, 0, 22632).into();
         info!(
-            "Loading keyyboard for {} build {}",
+            "Loading keyboard for {} build {}",
             if is_win11 { "Win11" } else { "Win10" },
             winver
         );
