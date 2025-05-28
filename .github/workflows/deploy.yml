@@ -19,16 +19,16 @@ jobs:
       matrix:
         platform:
           - os_name: linux-x86_64
-            os: ubuntu-20.04
+            os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
           - os_name: linux-aarch64
-            os: ubuntu-20.04
+            os: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
           - os_name: linux-arm
-            os: ubuntu-20.04
+            os: ubuntu-24.04
             target: arm-unknown-linux-gnueabi
           - os_name: linux-i686
-            os: ubuntu-20.04
+            os: ubuntu-24.04
             target: i686-unknown-linux-gnu
           - os_name: windows-aarch64
             os: windows-latest
@@ -65,7 +65,7 @@ jobs:
       - run: echo "${{ secrets.MEMFLOW_REGISTRY_SIGNING_KEY}}" > ec-secp256k1-priv-key.pem
       - name: Upload plugin (linux)
         run: memflowup --skip-version-check push --token ${{ secrets.MEMFLOW_REGISTRY_TOKEN }} --priv-key ec-secp256k1-priv-key.pem --file target/${{ matrix.platform.target }}/release/lib${{ env. PLUGIN_NAME}}.so
-        if: matrix.platform.os == 'ubuntu-20.04'
+        if: matrix.platform.os == 'ubuntu-24.04'
       - name: Upload plugin (windows)
         run: memflowup --skip-version-check push --token ${{ secrets.MEMFLOW_REGISTRY_TOKEN }} --priv-key ec-secp256k1-priv-key.pem --file target/${{ matrix.platform.target }}/release/${{ env. PLUGIN_NAME}}.dll
         if: matrix.platform.os == 'windows-latest'
