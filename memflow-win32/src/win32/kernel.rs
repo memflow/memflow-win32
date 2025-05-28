@@ -25,6 +25,8 @@ use std::convert::TryInto;
 use std::fmt;
 use std::prelude::v1::*;
 
+use muddy::muddy;
+
 use pelite::{self, pe64::exports::Export, PeView};
 
 const MAX_ITER_COUNT: usize = 65536;
@@ -140,13 +142,18 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
             let pe = PeView::from_bytes(&image).map_err(|err| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err)
             })?;
-            let addr = match pe.get_export_by_name("PsLoadedModuleList").map_err(|err| {
-                Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err)
-            })? {
+            let addr = match pe
+                .get_export_by_name(muddy!("PsLoadedModuleList"))
+                .map_err(|err| {
+                    Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err)
+                })? {
                 Export::Symbol(s) => self.kernel_info.os_info.base + *s as umem,
                 Export::Forward(_) => {
-                    return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
-                        .log_info("PsLoadedModuleList found but it was a forwarded export"))
+                    return Err(
+                        Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(muddy!(
+                            "PsLoadedModuleList found but it was a forwarded export"
+                        )),
+                    )
                 }
             };
 
@@ -179,7 +186,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
                 address: self.kernel_info.os_info.base,
                 pid: 0,
                 state: ProcessState::Alive,
-                name: "ntoskrnl.exe".into(),
+                name: muddy!("ntoskrnl.exe").into(),
                 path: "".into(),
                 command_line: "".into(),
                 sys_arch: self.kernel_info.os_info.arch,
@@ -648,14 +655,14 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
     ///
     /// This will generally be for the initial executable that was run
     fn primary_module_address(&mut self) -> Result<Address> {
-        Ok(self.module_by_name("ntoskrnl.exe")?.address)
+        Ok(self.module_by_name(muddy!("ntoskrnl.exe"))?.address)
     }
 
     /// Retrieves information for the primary module of the process
     ///
     /// This will generally be the initial executable that was run
     fn primary_module(&mut self) -> Result<ModuleInfo> {
-        self.module_by_name("ntoskrnl.exe")
+        self.module_by_name(muddy!("ntoskrnl.exe"))
     }
 
     /// Retrieves a list of all imports of a given module

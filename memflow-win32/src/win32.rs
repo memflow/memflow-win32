@@ -11,6 +11,7 @@ pub mod module;
 pub mod process;
 pub mod unicode_string;
 pub mod vat;
+pub mod vkey;
 
 pub use keyboard::*;
 pub use module::*;

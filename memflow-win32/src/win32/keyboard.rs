@@ -28,6 +28,8 @@ fn test<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Cl
 ```
 */
 use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
+#[cfg(feature = "regex")]
+use crate::ida_regex;
 
 use memflow::cglue::*;
 use memflow::error::PartialResultExt;
@@ -40,7 +42,9 @@ use memflow::types::{umem, Address};
 #[cfg(feature = "plugins")]
 use memflow::cglue;
 
-use log::debug;
+use muddy::muddy;
+
+use log::{debug, info};
 use std::convert::TryInto;
 
 #[cfg(feature = "plugins")]
@@ -156,21 +160,19 @@ impl<T> Win32Keyboard<T> {
         To replicate this via DRM, we need to find our session's gSessionGlobalSlot, dereference the pointer three times, and add the 0x3690 hardcoded offset.
 
         */
-        let win32kbase_module_info = kernel.module_by_name("win32kbase.sys")?;
-        debug!("found win32kbase.sys: {:?}", win32kbase_module_info);
 
         let procs = kernel.process_info_list()?;
 
         let gaf = procs
             .iter()
             .filter(|p| {
-                p.name.as_ref() == "winlogon.exe"
-                    || p.name.as_ref() == "explorer.exe"
-                    || p.name.as_ref() == "taskhostw.exe"
-                    || p.name.as_ref() == "smartscreen.exe"
-                    || p.name.as_ref() == "dwm.exe"
+                p.name.as_ref() == muddy!("winlogon.exe")
+                    || p.name.as_ref() == muddy!("explorer.exe")
+                    || p.name.as_ref() == muddy!("taskhostw.exe")
+                    || p.name.as_ref() == muddy!("smartscreen.exe")
+                    || p.name.as_ref() == muddy!("dwm.exe")
             })
-            .find_map(|p| Self::find_in_user_process(kernel, &win32kbase_module_info, p.pid).ok())
+            .find_map(|p| Self::find_in_user_process(kernel, p.pid).ok())
             .ok_or_else(|| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                     .log_info("unable to find any proxy process that contains gafAsyncKeyState")
@@ -184,32 +186,198 @@ impl<T> Win32Keyboard<T> {
         V: 'static + VirtualTranslate2 + Clone,
     >(
         kernel: &mut Win32Kernel<P, V>,
-        win32kbase_module_info: &ModuleInfo,
         pid: Pid,
     ) -> Result<(Win32ProcessInfo, Address)> {
         let user_process_info = kernel.process_info_by_pid(pid)?;
         let user_process_info_win32 =
             kernel.process_info_from_base_info(user_process_info.clone())?;
 
+        let win32kbase_mod_name = muddy!("win32kbase.sys");
+        let win32kbase_module_info: ModuleInfo = kernel.module_by_name(win32kbase_mod_name)?;
+        debug!("found {win32kbase_mod_name}: {:?}", win32kbase_module_info);
+
         // Win32k temporary session global driver was first introduced in 22H2 (10.0.22621.1) (2022-09-20)
         // so we cannot be sure it will be active on all Win11 devices
-        if kernel.kernel_info.kernel_winver >= (10, 0, 22621).into() {
-            debug!("Windows 11 detected.");
+        let winver = kernel.kernel_info.kernel_winver;
+        let is_win11 = winver >= (10, 0, 22621).into();
+        // let at_least_23_h2 = winver >= (10, 0, 22621).into();
+        let at_least_24_h2 = winver >= (10, 0, 22632).into();
+        info!(
+            "Loading keyboard for {} build {}",
+            if is_win11 { "Win11" } else { "Win10" },
+            winver
+        );
 
-            let win32ksgd_module_info = kernel.module_by_name("WIN32KSGD.SYS")?;
-            debug!("Found win32ksgd.sys: {:?}", win32ksgd_module_info);
+        if is_win11 {
+            // Load for Windows 11
+            // On Windows 11 there are special cases to handle on the border of 23h2 and 24h2
+
+            // offset from module base of gSessionGlobalSlots in win32k.sys (24h2) or win32ksgd.sys (on 23h2)
+            // todo add a signature scan for this and use this behaviour as a fallback
+            let (
+                g_session_global_slots_signature,
+                target_kernel_module_name,
+                g_session_global_slots_offset_fallback,
+                key_state_offset_fallback,
+            ) = if at_least_24_h2 {
+                // win32ksgd actually may not even exist anymore here
+                // now it is stored in win32k.sys
+                /*
+                int64_t W32GetSessionStateForSession(int32_t arg1)
+                ... omitted
+                +0x15508  488b05e1cf0600     mov     rax, qword [rel gSessionGlobalSlots]
+                +0x1550f  ffc9               dec     ecx // THIS LINE HERE BREAKS THE SIGNATURE SINCE LAST VERSION
+                +0x15511  488b04c8           mov     rax, qword [rax+rcx*8]
+                +0x15515  c3                 retn     {__return_addr}
+                 */
+
+                // 48 8B 05 ? ? ? ? FF C9 + 3 -> rel32 deref
+                // or 48 8B 05 ? ? ? ? FF C9 48 8B 04 C8 + 3 -> rel32 deref
+
+                let sig: &'static str;
+                #[cfg(feature = "regex")]
+                {
+                    sig = ida_regex![48 8B 05 ? ? ? ? FF C9];
+                }
+                #[cfg(not(feature = "regex"))]
+                {
+                    return Err(
+                        Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
+                        .log_error("cannot find keyboard signature because regex feature is disabled")
+                    ); // todo: repalce with pelite sig
+                }
+                
+
+                (sig, muddy!("win32k.sys"), 0x824F0, 0x3808) // 24H2  win32k.sys + 0x824F0
+            } else {
+                /*
+                +0x1260    int64_t SGDGetSessionState()
+                ... omitted
+                +0x127d  8d48ff             lea     ecx, [rax-0x1]
+                +0x1280  488b05891e0000     mov     rax, qword [rel gSessionGlobalSlots]
+                +0x1287  488b04c8           mov     rax, qword [rax+rcx*8]
+
+                +0x128b  4883c428           add     rsp, 0x28
+                +0x128f  c3                 retn     {__return_addr}
+
+                 */
+                // signature for 23h2
+                // 48 8B 05 ? ? ? ? 48 8B 04 C8 + 3 -> rel32 deref
+
+                let sig;
+                #[cfg(feature = "regex")]
+                {
+                    sig = ida_regex![48 8B 05 ? ? ? ? 48 8B 04 C8];
+                }
+                #[cfg(not(feature = "regex"))]
+                {
+                    return Err(
+                        Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
+                        .log_error("cannot find keyboard signature because regex feature is disabled")
+                    ); // todo: repalce with pelite sig
+                }
+
+                (sig, muddy!("WIN32KSGD.SYS"), 0x3110, 0x36a8) // 0x3690 or 0x36a8 // 23h2 and below win32ksgd.sys + 0x3110
+            };
+
+            // find either win32k.sys or win32ksgd.sys
+            let win32ksgd_module_info = match kernel.module_by_name(target_kernel_module_name) {
+                Ok(m) => m,
+                Err(_) => {
+                    return Err(
+                        Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound).log_info(
+                            ["unable to find kernel module", target_kernel_module_name].join(" ")
+                        ),
+                    )
+                }
+            };
+
+            debug!("Found kernel module: {:?}", win32ksgd_module_info);
+
+            // find the key states offset:
+            // win32kbase.sys
+            // b9 00 80 ff ff ? 22 B4 ? ? ? ? ? 41 -> + 9 -> rip rel32
+
+            /* 24H2
+            +0x1a8da5  d3e6               shl     esi, cl
+            +0x1a8da7  b90080ffff         mov     ecx, 0xffff8000
+            🔖+0x1a8dac  4022b41008380000   and     sil, byte [rax+rdx+0x3808]
+            +0x1a8db4  410fb7c7           movzx   eax, r15w
+            +0x1a8db8  660bc1             or      ax, cx
+            +0x1a8dbb  4084f6             test    sil, sil
+            +0x1a8dbe  66410f44c7         cmove   ax, r15w
+             */
+
+            /* 23H2
+            +0x0971e5  d3e6               shl     esi, cl
+            +0x0971e7  b90080ffff         mov     ecx, 0xffff8000
+            🔖+0x0971ec  4122b406a8360000   and     sil, byte [r14+rax+0x36a8]
+            +0x0971f4  410fb7c7           movzx   eax, r15w
+            +0x0971f8  660bc1             or      ax, cx
+            +0x0971fb  4084f6             test    sil, sil
+            +0x0971fe  66410f44c7         cmove   ax, r15w
+            */
 
             let mut user_process = kernel.process_by_info(user_process_info)?;
 
-            let g_session_global_slots_offset = 0x3110;
+            let key_state_offset: umem;
+            #[cfg(feature = "regex")]
+            {
+                let module_buf = user_process
+                    .virt_mem
+                    .read_raw(
+                        win32kbase_module_info.base,
+                        win32kbase_module_info.size.try_into().unwrap(),
+                    )
+                    .data_part()?;
+                key_state_offset = Self::scan_module_sig_val32(
+                    module_buf,
+                    ida_regex![b9 00 80 ff ff ? 22 B4 ? ? ? ? ? 41],
+                    9,
+                )
+                .unwrap_or(key_state_offset_fallback);
+            }
+
+            #[cfg(not(feature = "regex"))]
+            {
+                key_state_offset = key_state_offset_fallback
+            };
+
+            let g_session_global_slots_address: Address; // =
+            #[cfg(feature = "regex")]
+            {
+                g_session_global_slots_address = win32ksgd_module_info.base
+                    + Self::find_global_slots_sig(
+                        &mut user_process.virt_mem,
+                        &win32ksgd_module_info,
+                        g_session_global_slots_signature,
+                    )
+                    .and_then(|offset| {
+                        // santity check
+                        Ok(if offset == 0 {
+                            g_session_global_slots_offset_fallback
+                        } else {
+                            offset
+                        })
+                    })
+                    .unwrap_or(g_session_global_slots_offset_fallback);
+            };
+            #[cfg(not(feature = "regex"))]
+            {
+                g_session_global_slots_address =
+                    (win32ksgd_module_info.base + g_session_global_slots_offset_fallback);
+            };
+
             debug!(
-                "gSessionGlobalSlot address: {:?}",
-                win32ksgd_module_info.base + g_session_global_slots_offset
+                "{} address: {:?} : {:?}",
+                muddy!("gSessionGlobalSlots"),
+                win32ksgd_module_info.base + g_session_global_slots_offset_fallback,
+                g_session_global_slots_address
             );
 
             let g_session_global_slot_first_deref = user_process.virt_mem.read_addr_arch(
                 win32ksgd_module_info.arch.into(),
-                win32ksgd_module_info.base + g_session_global_slots_offset,
+                g_session_global_slots_address,
             )?;
             debug!(
                 "gSessionGlobalSlot 1st deref: {:?}",
@@ -221,7 +389,8 @@ impl<T> Win32Keyboard<T> {
                 g_session_global_slot_first_deref,
             )?;
             debug!(
-                "gSessionGlobalSlot 2nd deref: {:?}",
+                "{} 2nd deref: {:?}",
+                muddy!("gSessionGlobalSlots"),
                 g_session_global_slot_second_deref
             );
 
@@ -230,20 +399,22 @@ impl<T> Win32Keyboard<T> {
                 g_session_global_slot_second_deref,
             )?;
             debug!(
-                "gSessionGlobalSlot 3rd deref: {:?}",
+                "{} 3rd deref: {:?}",
+                muddy!("gSessionGlobalSlots"),
                 g_session_global_slot_third_deref
             );
 
             debug!(
                 "Key State Buffer Address: {:?}",
-                g_session_global_slot_third_deref + 0x3690
+                g_session_global_slot_third_deref + key_state_offset // 0x3690  or 0x36a8 or 0x3808 (key_state_offset_fallback)
             );
 
             Ok((
                 user_process_info_win32,
-                g_session_global_slot_third_deref + 0x3690,
+                g_session_global_slot_third_deref + key_state_offset, // todo: signature scan for the key state offset
             ))
         } else {
+            // Load for Windows 10
             let mut user_process = kernel.process_by_info(user_process_info)?;
             debug!(
                 "trying to find gaf signature in user proxy process `{}`",
@@ -251,10 +422,10 @@ impl<T> Win32Keyboard<T> {
             );
 
             // TODO: lazy
-            let export_addr = Self::find_gaf_pe(&mut user_process.virt_mem, win32kbase_module_info)
-                .or_else(|_| {
-                    Self::find_gaf_sig(&mut user_process.virt_mem, win32kbase_module_info)
-                })?;
+            let export_addr =
+                Self::find_gaf_pe(&mut user_process.virt_mem, &win32kbase_module_info).or_else(
+                    |_| Self::find_gaf_sig(&mut user_process.virt_mem, &win32kbase_module_info),
+                )?;
             debug!(
                 "found gaf signature in user proxy process `{}` at {:x}",
                 user_process.info().name.as_ref(),
@@ -268,13 +439,39 @@ impl<T> Win32Keyboard<T> {
         }
     }
 
+    /// returns the 32bit value in a the function assembly (instead of reading it as a RIP Relative (rel32) Address)
+    #[cfg(feature = "regex")]
+    fn scan_module_sig_val32(
+        module_buf: Vec<u8>,
+        sig: &str,
+        offset_to_val32: usize,
+    ) -> Result<umem> {
+        use ::regex::bytes::*;
+        let re = Regex::new(sig).map_err(|_| {
+            Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
+                .log_info(muddy!("malformed rip signature"))
+        })?;
+        let buf_offs = re
+            .find(module_buf.as_slice())
+            .ok_or_else(|| {
+                Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
+                    .log_info(muddy!("unable to find rip signature"))
+            })?
+            .start()
+            + offset_to_val32;
+
+        // Return the Little Endian 32bit value directly
+        Ok(u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap()) as umem)
+    }
+
     fn find_gaf_pe(
         virt_mem: &mut impl MemoryView,
         win32kbase_module_info: &ModuleInfo,
     ) -> Result<umem> {
         let mut offset = None;
+        let gaf_name = muddy!("gafAsyncKeyState");
         let callback = &mut |export: ExportInfo| {
-            if export.name.as_ref() == "gafAsyncKeyState" {
+            if export.name.as_ref() == gaf_name {
                 offset = Some(export.offset);
                 false
             } else {
@@ -288,7 +485,7 @@ impl<T> Win32Keyboard<T> {
         )?;
         offset.ok_or_else(|| {
             Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
-                .log_info("unable to find gafAsyncKeyState")
+                .log_info(muddy!("unable to find gafAsyncKeyState"))
         })
     }
 
@@ -308,13 +505,13 @@ impl<T> Win32Keyboard<T> {
             .data_part()?;
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
-        let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
-                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info("malformed gafAsyncKeyState signature"))?;
+        let re = Regex::new(ida_regex![48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F])
+                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info(muddy!("malformed gafAsyncKeyState signature")))?;
         let buf_offs = re
             .find(module_buf.as_slice())
             .ok_or_else(|| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
-                    .log_info("unable to find gafAsyncKeyState signature")
+                    .log_info(muddy!("unable to find gafAsyncKeyState signature"))
             })?
             .start()
             + 0x3;
@@ -323,10 +520,56 @@ impl<T> Win32Keyboard<T> {
         let export_offs = buf_offs as u32
             + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
             + 0x4;
-        debug!("gafAsyncKeyState export found at: {:x}", export_offs);
+        debug!(
+            "{} export found at: {:x}",
+            muddy!("gafAsyncKeyState"),
+            export_offs
+        );
         Ok(export_offs as umem)
     }
 
+    /// This is for windows 11 support
+    #[cfg(feature = "regex")]
+    fn find_global_slots_sig(
+        virt_mem: &mut impl MemoryView,
+        win32k_module_info: &ModuleInfo,
+        signature: &str,
+    ) -> Result<umem> {
+        use ::regex::bytes::*;
+
+        let module_buf = virt_mem
+            .read_raw(
+                win32k_module_info.base,
+                win32k_module_info.size.try_into().unwrap(),
+            )
+            .data_part()?;
+
+        let re = Regex::new(signature).map_err(|_| {
+            Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
+                .log_info(muddy!("malformed gSessionGlobalSlots signature"))
+        })?;
+        let buf_offs = re
+            .find(module_buf.as_slice())
+            .ok_or_else(|| {
+                Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
+                    .log_info(muddy!("unable to find gSessionGlobalSlots signature"))
+            })?
+            .start()
+            + 0x3;
+
+        // compute rip relative addr
+        let export_offs = buf_offs as u32
+            + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
+            + 0x4;
+        debug!(
+            "{} export found at: {:x}",
+            muddy!("gSessionGlobalSlots"),
+            export_offs
+        );
+        Ok(export_offs as umem)
+    }
+
+    // feature disabled stubs:
     #[cfg(not(feature = "regex"))]
     fn find_gaf_sig(
         virt_mem: &mut impl MemoryView,
@@ -334,7 +577,18 @@ impl<T> Win32Keyboard<T> {
     ) -> Result<umem> {
         Err(
             Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
-                .log_error("signature scanning requires std"),
+                .log_error("cannot find keyboard signature because regex feature is disabled"),
+        )
+    }
+
+    #[cfg(not(feature = "regex"))]
+    fn find_global_slots_sig(
+        virt_mem: &mut impl MemoryView,
+        win32kbase_module_info: &ModuleInfo,
+    ) -> Result<umem> {
+        Err(
+            Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
+                .log_error("cannot find keyboard signature because regex feature is disabled"),
         )
     }
 }
