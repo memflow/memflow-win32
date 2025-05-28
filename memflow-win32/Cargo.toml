@@ -61,6 +61,11 @@ path = "examples/dump_offsets.rs"
 required-features = ["memflow/serde_derive"]
 
 [[example]]
+name = "keyboard_listen"
+path = "examples/keyboard_listen.rs"
+required-features = ["memflow/plugins"]
+
+[[example]]
 name = "open_process"
 path = "examples/open_process.rs"
 required-features = ["memflow/plugins"]
