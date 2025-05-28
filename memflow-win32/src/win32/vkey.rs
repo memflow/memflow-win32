@@ -67,20 +67,20 @@ pub fn vkey_range(start: VKEY, end: VKEY) -> impl Iterator<Item = VKEY> {
     (start.0..end.0).map(VKEY)
 }
 
-#[cfg(all(feature = "nightly", nightly))]
-use std::{iter::Step};
-#[cfg(all(feature = "nightly", nightly))]
-impl std::iter::Step for VKEY {
-    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
-        u16::steps_between(&start.0, &end.0)
-    }
-    fn forward_checked(start: Self, count: usize) -> Option<Self> {
-        u16::forward_checked(start.0, count).map(VKEY)
-    }
-    fn backward_checked(start: Self, count: usize) -> Option<Self> {
-        u16::backward_checked(start.0, count).map(VKEY)
-    }
-}
+// #[cfg(all(feature = "nightly", nightly))]
+// use std::iter::Step;
+// #[cfg(all(feature = "nightly", nightly))]
+// impl std::iter::Step for VKEY {
+//     fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+//         u16::steps_between(&start.0, &end.0)
+//     }
+//     fn forward_checked(start: Self, count: usize) -> Option<Self> {
+//         u16::forward_checked(start.0, count).map(VKEY)
+//     }
+//     fn backward_checked(start: Self, count: usize) -> Option<Self> {
+//         u16::backward_checked(start.0, count).map(VKEY)
+//     }
+// }
 
 pub const VK_0: VKEY = VKEY(48u16);
 pub const VK_1: VKEY = VKEY(49u16);

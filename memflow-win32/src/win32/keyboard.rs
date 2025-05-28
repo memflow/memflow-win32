@@ -243,10 +243,11 @@ impl<T> Win32Keyboard<T> {
                 {
                     return Err(
                         Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
-                        .log_error("cannot find keyboard signature because regex feature is disabled")
+                            .log_error(
+                                "cannot find keyboard signature because regex feature is disabled",
+                            ),
                     ); // todo: repalce with pelite sig
                 }
-                
 
                 (sig, muddy!("win32k.sys"), 0x824F0, 0x3808) // 24H2  win32k.sys + 0x824F0
             } else {
@@ -273,7 +274,9 @@ impl<T> Win32Keyboard<T> {
                 {
                     return Err(
                         Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
-                        .log_error("cannot find keyboard signature because regex feature is disabled")
+                            .log_error(
+                                "cannot find keyboard signature because regex feature is disabled",
+                            ),
                     ); // todo: repalce with pelite sig
                 }
 
@@ -286,7 +289,7 @@ impl<T> Win32Keyboard<T> {
                 Err(_) => {
                     return Err(
                         Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound).log_info(
-                            ["unable to find kernel module", target_kernel_module_name].join(" ")
+                            ["unable to find kernel module", target_kernel_module_name].join(" "),
                         ),
                     )
                 }
@@ -352,13 +355,13 @@ impl<T> Win32Keyboard<T> {
                         &win32ksgd_module_info,
                         g_session_global_slots_signature,
                     )
-                    .and_then(|offset| {
+                    .map(|offset| {
                         // santity check
-                        Ok(if offset == 0 {
+                        if offset == 0 {
                             g_session_global_slots_offset_fallback
                         } else {
                             offset
-                        })
+                        }
                     })
                     .unwrap_or(g_session_global_slots_offset_fallback);
             };
@@ -505,8 +508,11 @@ impl<T> Win32Keyboard<T> {
             .data_part()?;
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
-        let re = Regex::new(ida_regex![48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F])
-                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info(muddy!("malformed gafAsyncKeyState signature")))?;
+        let re =
+            Regex::new(ida_regex![48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F]).map_err(|_| {
+                Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
+                    .log_info(muddy!("malformed gafAsyncKeyState signature"))
+            })?;
         let buf_offs = re
             .find(module_buf.as_slice())
             .ok_or_else(|| {
