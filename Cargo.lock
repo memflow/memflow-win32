@@ -948,8 +948,6 @@ checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 [[package]]
 name = "memflow"
 version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b5a164dd29bb697a512c389215acf4899a3e671a72844acb04d1ddac6ba8d7f"
 dependencies = [
  "abi_stable",
  "bitflags 1.3.2",
@@ -982,8 +980,6 @@ dependencies = [
 [[package]]
 name = "memflow-derive"
 version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d894dc2b0bbce37b81280e1b36da4db3e524e4df5a57d5899b4bd943f489b506"
 dependencies = [
  "darling",
  "proc-macro-crate",
