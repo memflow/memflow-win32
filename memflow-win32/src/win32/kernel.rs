@@ -6,8 +6,8 @@ use crate::{
 };
 
 use super::{
-    process::IMAGE_FILE_NAME_LENGTH, Win32KernelBuilder, Win32KernelInfo, Win32Keyboard,
-    Win32ModuleListInfo, Win32Process, Win32ProcessInfo, Win32VirtualTranslate,
+    process::IMAGE_FILE_NAME_LENGTH, Win32EnvListInfo, Win32KernelBuilder, Win32KernelInfo,
+    Win32Keyboard, Win32ModuleListInfo, Win32Process, Win32ProcessInfo, Win32VirtualTranslate,
 };
 
 use memflow::mem::virt_translate::*;
@@ -207,6 +207,9 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
             module_info_native: Some(kernel_modules),
             module_info_wow64: None,
 
+            env_info_native: None,
+            env_info_wow64: None,
+
             vad_root,
         })
     }
@@ -317,6 +320,14 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
             .map(|peb| Win32ModuleListInfo::with_peb(&mut proc_reader, peb, base_info.proc_arch))
             .transpose()?;
 
+        let env_info_native = peb_native
+            .map(|peb| Win32EnvListInfo::with_peb(&mut proc_reader, peb, base_info.sys_arch))
+            .transpose()?;
+
+        let env_info_wow64 = peb_wow64
+            .map(|peb| Win32EnvListInfo::with_peb(&mut proc_reader, peb, base_info.proc_arch))
+            .transpose()?;
+
         Ok(Win32ProcessInfo {
             base_info,
 
@@ -332,6 +343,9 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
 
             module_info_native,
             module_info_wow64,
+
+            env_info_native,
+            env_info_wow64,
 
             vad_root,
         })

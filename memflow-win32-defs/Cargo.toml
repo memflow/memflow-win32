@@ -13,7 +13,9 @@ keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "api-bindings", "memory-management", "os" ]
 
 [dependencies]
-memflow = { version = "0.2", default-features = false }
+#memflow = { version = "0.2", default-features = false }
+memflow = { path = "../../memflow/memflow" }
+
 log = { version = "0.4", default-features = false }
 no-std-compat = { version = "0.4", features = ["alloc"] }
 serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
