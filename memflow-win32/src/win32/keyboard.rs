@@ -202,6 +202,7 @@ impl<T> Win32Keyboard<T> {
         let is_win11 = winver >= (10, 0, 22621).into();
         // let at_least_23_h2 = winver >= (10, 0, 22621).into();
         let at_least_24_h2 = winver >= (10, 0, 22632).into();
+        let at_least_25_h2 = winver >= (10, 0, 26200).into();
         info!(
             "Loading keyboard for {} build {}",
             if is_win11 { "Win11" } else { "Win10" },
@@ -249,7 +250,11 @@ impl<T> Win32Keyboard<T> {
                     ); // todo: repalce with pelite sig
                 }
 
-                (sig, muddy!("win32k.sys"), 0x824F0, 0x3808) // 24H2  win32k.sys + 0x824F0
+                if at_least_25_h2 {
+                    (sig, muddy!("win32k.sys"), 0x86678, 0x3808) // 25H2  win32k.sys + 0x86678
+                } else {
+                    (sig, muddy!("win32k.sys"), 0x824F0, 0x3808) // 24H2  win32k.sys + 0x824F0
+                }
             } else {
                 /*
                 +0x1260    int64_t SGDGetSessionState()
