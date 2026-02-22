@@ -251,7 +251,7 @@ impl<T> Win32Keyboard<T> {
                 }
 
                 if at_least_25_h2 {
-                    (sig, muddy!("win32k.sys"), 0x86678, 0x3808) // 25H2  win32k.sys + 0x86678
+                    (sig, muddy!("win32k.sys"), 0x86678, 0x3800) // 25H2  win32k.sys + 0x86678
                 } else {
                     (sig, muddy!("win32k.sys"), 0x824F0, 0x3808) // 24H2  win32k.sys + 0x824F0
                 }
