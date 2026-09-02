@@ -11,9 +11,6 @@ pub mod offsets;
 
 pub mod win32;
 
-#[cfg(feature = "regex")]
-pub mod ida_signatures;
-
 pub mod prelude {
     pub mod v1 {
         pub use crate::kernel::*;
