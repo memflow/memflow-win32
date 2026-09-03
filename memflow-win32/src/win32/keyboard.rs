@@ -241,12 +241,17 @@ impl<T> Win32Keyboard<T> {
             };
 
             let win32ksgd_module_info =
-                kernel.module_by_name(target_kernel_module_name).map_err(|_| {
-                    Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound).log_info(
-                        [muddy!("unable to find kernel module"), target_kernel_module_name]
+                kernel
+                    .module_by_name(target_kernel_module_name)
+                    .map_err(|_| {
+                        Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound).log_info(
+                            [
+                                muddy!("unable to find kernel module"),
+                                target_kernel_module_name,
+                            ]
                             .join(" "),
-                    )
-                })?;
+                        )
+                    })?;
             debug!("Found kernel module: {:?}", win32ksgd_module_info);
 
             let mut user_process = kernel.process_by_info(user_process_info)?;
@@ -270,11 +275,7 @@ impl<T> Win32Keyboard<T> {
                         muddy!("key state offset signature not found in win32kbase.sys")
                     ))
                 })? as umem;
-            debug!(
-                "{} = {:#x}",
-                muddy!("key state offset"),
-                key_state_offset
-            );
+            debug!("{} = {:#x}", muddy!("key state offset"), key_state_offset);
 
             // Read the target kernel module (win32k.sys or win32ksgd.sys) for gSessionGlobalSlots.
             let ksgd_buf = user_process
