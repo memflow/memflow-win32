@@ -35,15 +35,17 @@ use std::{fs::File, io::Read, path::Path};
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ArchOffsets {
-    pub peb_ldr: usize,             // _PEB::Ldr
-    pub peb_process_params: usize,  // _PEB::ProcessParameters
-    pub ldr_list: usize,            // _PEB_LDR_DATA::InLoadOrderModuleList
-    pub ldr_data_base: usize,       // _LDR_DATA_TABLE_ENTRY::DllBase
-    pub ldr_data_size: usize,       // _LDR_DATA_TABLE_ENTRY::SizeOfImage
-    pub ldr_data_full_name: usize,  // _LDR_DATA_TABLE_ENTRY::FullDllName
-    pub ldr_data_base_name: usize,  // _LDR_DATA_TABLE_ENTRY::BaseDllName
-    pub ppm_image_path_name: usize, // _RTL_USER_PROCESS_PARAMETERS::ImagePathName
-    pub ppm_command_line: usize,    // _RTL_USER_PROCESS_PARAMETERS::CommandLine
+    pub peb_ldr: usize,              // _PEB::Ldr
+    pub peb_process_params: usize,   // _PEB::ProcessParameters
+    pub ldr_list: usize,             // _PEB_LDR_DATA::InLoadOrderModuleList
+    pub ldr_data_base: usize,        // _LDR_DATA_TABLE_ENTRY::DllBase
+    pub ldr_data_size: usize,        // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+    pub ldr_data_full_name: usize,   // _LDR_DATA_TABLE_ENTRY::FullDllName
+    pub ldr_data_base_name: usize,   // _LDR_DATA_TABLE_ENTRY::BaseDllName
+    pub ppm_image_path_name: usize,  // _RTL_USER_PROCESS_PARAMETERS::ImagePathName
+    pub ppm_command_line: usize,     // _RTL_USER_PROCESS_PARAMETERS::CommandLine
+    pub ppm_environment: usize,      // _RTL_USER_PROCESS_PARAMETERS::Environment
+    pub ppm_environment_size: usize, // _RTL_USER_PROCESS_PARAMETERS::EnvironmentSize
 }
 
 pub const X86: Win32ArchOffsets = Win32ArchOffsets {
@@ -56,6 +58,8 @@ pub const X86: Win32ArchOffsets = Win32ArchOffsets {
     ldr_data_base_name: 0x2c,
     ppm_image_path_name: 0x38,
     ppm_command_line: 0x40,
+    ppm_environment: 0x48,
+    ppm_environment_size: 0x290,
 };
 
 pub const X64: Win32ArchOffsets = Win32ArchOffsets {
@@ -68,6 +72,8 @@ pub const X64: Win32ArchOffsets = Win32ArchOffsets {
     ldr_data_base_name: 0x58,
     ppm_image_path_name: 0x60,
     ppm_command_line: 0x70,
+    ppm_environment: 0x80,
+    ppm_environment_size: 0x3f0,
 };
 
 pub const AARCH64: Win32ArchOffsets = Win32ArchOffsets {
@@ -80,6 +86,8 @@ pub const AARCH64: Win32ArchOffsets = Win32ArchOffsets {
     ldr_data_base_name: 0x58,
     ppm_image_path_name: 0x60,
     ppm_command_line: 0x70,
+    ppm_environment: 0x80,
+    ppm_environment_size: 0x3f0,
 };
 
 impl Win32OffsetsArchitecture {

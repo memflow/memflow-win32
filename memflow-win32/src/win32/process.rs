@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use super::{Win32Kernel, Win32ModuleListInfo};
+use super::{Win32EnvListInfo, Win32Kernel, Win32ModuleListInfo};
 
 use crate::prelude::MmVadOffsetTable;
 
@@ -45,6 +45,10 @@ pub struct Win32ProcessInfo {
     // modules
     pub module_info_native: Option<Win32ModuleListInfo>,
     pub module_info_wow64: Option<Win32ModuleListInfo>,
+
+    //envars
+    pub env_info_native: Option<Win32EnvListInfo>,
+    pub env_info_wow64: Option<Win32EnvListInfo>,
 
     // memory
     pub vad_root: Address,
@@ -311,6 +315,110 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> Process
         memflow::os::util::module_section_list_callback(&mut self.virt_mem, info, callback)
     }
 
+    /// Walks the process' environment and calls the provided callback for each variable
+    ///
+    /// # Arguments
+    /// * `target_arch` - sets which architecture to retrieve the environment for (if emulated). Choose
+    /// between `Some(ProcessInfo::sys_arch())`, and `Some(ProcessInfo::proc_arch())`. `None` for all.
+    /// * `callback` - where to pass each variable to. This is an opaque callback.
+    fn envar_list_callback(
+        &mut self,
+        target_arch: Option<&ArchitectureIdent>,
+        mut callback: EnvVarCallback,
+    ) -> Result<()> {
+        let infos = [
+            (
+                self.proc_info.env_info_native,
+                self.proc_info.base_info.sys_arch,
+            ),
+            (
+                self.proc_info.env_info_wow64,
+                self.proc_info.base_info.proc_arch,
+            ),
+        ];
+
+        let iter = infos
+            .into_iter()
+            .filter(|(_, a)| target_arch.map(|ta| *a == *ta).unwrap_or(true))
+            .filter_map(|(info, arch)| info.zip(Some(arch)));
+
+        self.envar_list_with_infos_callback(iter, &mut callback)
+    }
+
+    /// Retrieves address of the process' environment block for the given architecture
+    ///
+    /// # Remarks
+    ///
+    /// On Windows the environment is the UTF-16LE multi-string at
+    /// PEB->ProcessParameters->Environment (or the 32-bit PEB for WOW64).
+    fn environment_block_address(&mut self, architecture: ArchitectureIdent) -> Result<Address> {
+        // Select the correct PEB for the requested view (native vs WOW64)
+        let peb = if architecture == self.proc_info.base_info.sys_arch {
+            self.proc_info.peb_native
+        } else {
+            self.proc_info.peb_wow64
+        }
+        .ok_or(Error(ErrorOrigin::OsLayer, ErrorKind::EnvarNotFound))?;
+
+        // Arch-specific offsets
+        let aoff = crate::offsets::Win32ArchOffsets::from(architecture);
+        let arch_obj = architecture.into();
+
+        // PEB->ProcessParameters
+        let proc_params = self
+            .virt_mem
+            .read_addr_arch(arch_obj, peb + aoff.peb_process_params)?;
+        if proc_params.is_null() {
+            return Err(Error(ErrorOrigin::OsLayer, ErrorKind::EnvarNotFound));
+        }
+
+        // ProcessParameters->Environment (PWSTR)
+        let env_ptr = self
+            .virt_mem
+            .read_addr_arch(arch_obj, proc_params + aoff.ppm_environment)?;
+        if env_ptr.is_null() {
+            return Err(Error(ErrorOrigin::OsLayer, ErrorKind::EnvarNotFound));
+        }
+
+        Ok(env_ptr)
+    }
+
+    /// Enumerates environment variables starting from a known environment block address
+    ///
+    /// # Arguments
+    /// * `env_block` - base address of the environment block
+    /// * `architecture` - architecture of the environment
+    /// * `callback` - where to pass each variable to. This is an opaque callback.
+    fn envar_list_from_address(
+        &mut self,
+        env_block: Address,
+        architecture: ArchitectureIdent,
+        callback: EnvVarCallback,
+    ) -> Result<()> {
+        // Compute a safe upper bound for the environment block.
+        let ranges = self.mapped_mem_range_vec(0, Address::null(), Address::invalid());
+        let mut max_bytes: umem = 256 * 1024; // default cap
+
+        for r in ranges {
+            // r.0 = base, r.1 = size
+            let region_end = r.0 + r.1;
+            if env_block >= r.0 && env_block < region_end {
+                let span = region_end.to_umem().saturating_sub(env_block.to_umem());
+                max_bytes = core::cmp::min(span, (1usize << 20) as umem);
+                break;
+            }
+        }
+
+        // Windows environment is UTF-16LE multi-string.
+        memflow::os::util::env_block_list_utf16_callback(
+            &mut self.virt_mem,
+            env_block,
+            max_bytes,
+            architecture,
+            callback,
+        )
+    }
+
     /// Retrieves the process info
     fn info(&self) -> &ProcessInfo {
         &self.proc_info.base_info
@@ -489,6 +597,18 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> Win32Process
         for (info, arch) in module_infos {
             let callback = &mut |address| out.call(ModuleAddressInfo { address, arch });
             info.module_entry_list_callback(self, arch, callback.into())?;
+        }
+        Ok(())
+    }
+
+    fn envar_list_with_infos_callback(
+        &mut self,
+        env_infos: impl Iterator<Item = (Win32EnvListInfo, ArchitectureIdent)>,
+        out: &mut EnvVarCallback,
+    ) -> Result<()> {
+        for (info, arch) in env_infos {
+            let cb = &mut |ev: EnvVarInfo| out.call(ev);
+            info.envar_list_callback(self, arch, cb.into())?;
         }
         Ok(())
     }
