@@ -24,7 +24,7 @@ pub fn main() -> Result<()> {
     let process_name = process_name.unwrap_or(muddy!("explorer.exe"));
 
     // create inventory + connector
-    let inventory = Inventory::scan();
+    let mut inventory = Inventory::scan();
     let connector = inventory.builder().connector_chain(chain).build()?;
 
     let mut os = Win32Kernel::builder(connector)

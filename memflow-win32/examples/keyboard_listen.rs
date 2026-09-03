@@ -23,7 +23,7 @@ pub fn main() -> Result<()> {
     let (chain, conn_args) = extract_args(&matches)?;
 
     // create inventory + connector
-    let inventory = Inventory::scan();
+    let mut inventory = Inventory::scan();
     let connector = inventory
         .builder()
         .connector_chain(chain)
